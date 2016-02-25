@@ -15,5 +15,3 @@ def load(fpath):
         code = compile(src.read(), fpath, "exec",)
         exec(code, runescope)
 
-@rune("root"):
-def root_rune():
