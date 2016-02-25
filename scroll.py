@@ -14,6 +14,7 @@ determines what kind of node it forms.
 :list()
      - "#"  = Heading marker.
      - ":"  = Rune specifier.
+     - ";"  = Comment.
      - "!"  = Raw line.
      - "\n" or just whitespace = Separator
      - Anything else: Normal line.
@@ -30,18 +31,18 @@ Quux, nested inside baz, nested inside bar, nested inside foo.
 
 BNF:
 <scroll> ::= <node> | <scroll> "\\n" <node>
-<node> ::= <rune> | <raw> | <heading> | <text>
+<node> ::= <rune> | <raw> | <heading> | <text> | <comment>
 <indent> ::= "" | "    " | <indent> "    "
 
 <rune> ::= <indent> ":" <identifier> "(" <argstr> ")"
 <raw> ::= <indent> "!" <string>
 <heading> ::= <indent> "#" <string>
 <text> ::= <indent> <string>
+<comment> ::= <indent> ";" <string>
 
 <argstr> ::= <quoted string> | <argstr> "," <quoted string>
 """
 
-from enum import Enum
 from string import whitespace
 
 
@@ -109,13 +110,15 @@ def charcount(s, c):
     return i
 
 
-class token(Enum):
-    rune = 0
-    indent = 1
+# Token symbols
+class Token:
+    indent = 0
+    rune = 1
     raw = 2
     heading = 3
     text = 4
     blank = 5
+    comment = 6
 
 
 def lex(source):
@@ -129,59 +132,87 @@ def lex(source):
         # Grab indentation.
         while line.startswith("    "):
             line = line[4:]
-            yield (token.indent, None)
+            yield (Token.indent, None)
 
         # identify line type.
         if line.startswith("!"):
             # Raw lines are unstripped.
-            yield (token.raw, line[1:])
+            yield (Token.raw, line[1:])
 
         elif line.startswith("#"):
             level = charcount(line, "#")
-            yield token.heading, (level, line.strip("#" + whitespace))
+            yield Token.heading, (level, line.strip("#" + whitespace))
 
         elif line.startswith(":"):
             # Runes have the form:
             # ":" || <rune id> || "(" || args || ")"
             runeid, _, enil = line[1:].partition("(")
             args, _, _, = enil.rpartition(")")
-            yield token.rune, (runeid, lex_argstr(args))
+            yield Token.rune, (runeid, lex_argstr(args))
+
+        elif line.startswith(";"):
+            # This is a comment.
+            yield Token.comment, line[1:]
 
         else:
             line = line.strip()
             if len(line) > 0:
-                yield (token.text, line)
+                yield Token.text, line
             else:
-                yield (token.blank, None)
+                yield Token.blank, None
 
 
-class ScrollNode:
-    def __init__(self, toktype, tokval):
-        self.toktype = toktype
-        self.tokval = tokval
+class Node:
+    # Kinds of node.
+    root = 0
+    rune = 1
+    raw = 2
+    heading = 3
+    text = 4
+    blank = 5
+
+    def __init__(self, kind, value):
+        self.kind = kind
+        self.value = value
         self.nodes = []
+
+
+# Map of tokens to corresponding nodes.
+parser_token_map = {
+    Token.rune:     Node.rune,
+    Token.raw:      Node.raw,
+    Token.heading:  Node.heading,
+    Token.text:     Node.text,
+    Token.blank:    Node.blank
+}
 
 
 def parse(tokens):
     indent = 0
     prev_indent = 0
-    root = ScrollNode(token.rune, ("root", None))
+    root = Node(Node.root, None)
     scope_stack = []
     scope_cur = root
     prev_node = root
 
-    for toktype, tokval in tokens:
+    for toksym, tokval in tokens:
         # Determine indentation level.
-        if toktype == token.indent:
+        if toksym is Token.indent:
             # Ignore extra indents.
             indent += 0 if indent > prev_indent else 1
             continue
 
-        node = ScrollNode(toktype, tokval)
+        # Construct a node from a token symbol, if possible.
+        node = None
+        if toksym in parser_token_map:
+            node = Node(parser_token_map[toksym], tokval)
 
-        # Blank tokens should not affect the scope.
-        if toktype == token.blank:
+        if node.kind is Node.blank:
+            # Blank nodes should not affect the scope.
             indent = prev_indent
+            # Consecutive blank nodes sould not be emitted.
+            if prev_node.kind is Node.blank:
+                node = None
 
         elif indent > prev_indent:
             # Push current scope to the scope stack.
@@ -192,8 +223,10 @@ def parse(tokens):
             # Pop from the scope stack.
             scope_cur = scope_stack.pop()
 
-        scope_cur.nodes.append(node)
-        prev_node = node
+        if node is not None:
+            scope_cur.nodes.append(node)
+            prev_node = node
+
         prev_indent = indent
         indent = 0
 
@@ -203,6 +236,6 @@ def parse(tokens):
 def print_tree(node, depth=0):
     idnt = depth - 1
     bnch = 0 if idnt < 0 else 1
-    print(" |  " * idnt + " |->" * bnch, node.toktype, node.tokval)
+    print(" |  " * idnt + " |->" * bnch, node.kind, node.value)
     for n in node.nodes:
         print_tree(n, depth + 1)
