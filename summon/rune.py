@@ -1,13 +1,30 @@
-from sys import path
 
-from .scroll import Node
+"""
+rune - module containing the rune decorator,
+and some built in runes.
+
+A rune is a python function that returns a
+list or tuple of 0 or more nodes.
+
+All runes have a specific signature:
+    function(args*, nodes=[list of nodes], context={dict of context})
+"""
 
 runes = {}
 
 
-def rune(runeid, registry=runes):
+def register(runeid, runefunc):
+    runes[runeid] = runefunc
+
+
+def lookup(runeid):
+    return runes[runeid]
+
+
+def rune(runeid):
+    """Rune decorator function."""
     def regrune(runefunc):
-        registry[runeid] = runefunc
+        register(runeid, runefunc)
     return regrune
 
 
@@ -18,44 +35,3 @@ def load(fpath):
         }
         code = compile(src.read(), fpath, "exec",)
         exec(code, runescope)
-
-
-def collect_nodes(first, gen):
-    collected = [first]
-    tail = None
-    for node in gen:
-        if node.kind is not first.kind:
-            tail = node
-            break
-        else:
-            collected.append(node)
-    return collected, tail
-
-
-default_collators = {
-    Node.text:  (" ", lambda n: n.strip()),
-    Node.raw:   ("\n", lambda n: n)
-}
-
-
-def collate(nodelist, collators=default_collators):
-    """Node collator."""
-    collated_nodes = []
-
-    nodegen = iter(nodelist)
-
-    try:
-        node = next(nodegen)
-        while True:
-            if node is not None and node.kind in collators:
-                adjns, next_node = collect_nodes(node, nodegen)
-                jc, fn = collators[node.kind]
-                node.value = jc.join(fn(n.value) for n in adjns)
-            else:
-                next_node = next(nodegen)
-            collated_nodes.append(node)
-            node = next_node
-    except StopIteration:
-        pass
-
-    return collated_nodes
