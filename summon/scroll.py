@@ -1,33 +1,23 @@
 """
-# Scroll #
-Simple markup language for summon
+scroll - module for understanding scroll.
 
-## Syntax: ##
-A scroll is composed of a heriachial tree of runes.
-Each node in the tree can have any number of descendents.
+Scroll is a simple markup language for summon.
+
+Syntax:
+A scroll represents a heriachial n-tree of nodes with types and values.
+Each node in the tree can have any number of any type of descendents.
 
 
-Any line type can be indented.
+Any line type can be indented, including comments.
 Indentation is done with groups of four spaces.
 After processing any indentation, the first character of a line
 determines what kind of node it forms.
-:list()
-     - "#"  = Heading marker.
-     - ":"  = Rune specifier.
-     - ";"  = Comment.
-     - "!"  = Raw line.
-     - "\n" or just whitespace = Separator
-     - Anything else: Normal line.
-
-## Example: ##
-Quux, nested inside baz, nested inside bar, nested inside foo.
-
-:code()
-    !:foo()
-    !    :bar()
-    !        :baz()
-    !            :quux()
-
+ - "#"  = Heading marker.
+ - ":"  = Rune specifier.
+ - ";"  = Comment.
+ - "!"  = Raw line.
+ - "\n" or just whitespace = Separator
+ - Anything else: Normal line.
 
 BNF:
 <scroll> ::= <node> | <scroll> "\\n" <node>
@@ -44,10 +34,12 @@ BNF:
 """
 
 from string import whitespace
+from .tree import Node, NODE_ROOT, NODE_RUNE, NODE_RAW, \
+    NODE_HEADING, NODE_TEXT, NODE_BLANK
 
 
 # Escape sequences.
-escape_map = {
+ESCAPE_MAP = {
     "n": "\n",  # LF (line feed)
     "r": "\r",  # CR (carriage return)
     "t": "\t",  # tab (horizontal)
@@ -66,7 +58,7 @@ def lex_argstr(argstr):
     Turns a string representing a list of strings, into a list of strings.
     Strings are either "quoted" or 'quoted', and are comma separated.
     Understands most c/python escape codes within strings.
-    See also: escape_map
+    See also: ESCAPE_MAP
     """
     argv = []
     curarg = []
@@ -87,8 +79,8 @@ def lex_argstr(argstr):
             if char == strterm and not escaped:
                 strterm = None
             else:
-                if escaped and char in escape_map:
-                    char = escape_map[char]
+                if escaped and char in ESCAPE_MAP:
+                    char = ESCAPE_MAP[char]
                 curarg.append(char)
     if strterm is not None:
         argv.append("".join(curarg))
@@ -102,26 +94,26 @@ def gensplit(src, sep):
         yield sub
 
 
-def charcount(s, c):
+def charcount(string, char):
     """counts occurances of c at the start of s."""
     i = 0
-    while i < len(s) and s[i] == c:
+    while i < len(string) and string[i] == char:
         i += 1
     return i
 
 
 # Token symbols
-class Token:
-    indent = 0
-    rune = 1
-    raw = 2
-    heading = 3
-    text = 4
-    blank = 5
-    comment = 6
+TOKEN_INDENT = "<indent>"
+TOKEN_RUNE = "<rune>"
+TOKEN_RAW = "<raw>"
+TOKEN_HEADING = "<heading>"
+TOKEN_TEXT = "<text>"
+TOKEN_BLANK = "<blank>"
+TOKEN_COMMENT = "<comment>"
 
 
 def lex(source):
+    """Process scroll source code into a series of named tokens."""
     if isinstance(source, str):
         source = gensplit(source, "\n")
 
@@ -132,86 +124,72 @@ def lex(source):
         # Grab indentation.
         while line.startswith("    "):
             line = line[4:]
-            yield (Token.indent, None)
+            yield (TOKEN_INDENT, None)
 
         # identify line type.
         if line.startswith("!"):
             # Raw lines are unstripped.
-            yield (Token.raw, line[1:])
+            yield (TOKEN_RAW, line[1:])
 
         elif line.startswith("#"):
             level = charcount(line, "#")
-            yield Token.heading, (level, line.strip("#" + whitespace))
+            yield TOKEN_HEADING, (level, line.strip("#" + whitespace))
 
         elif line.startswith(":"):
             # Runes have the form:
             # ":" || <rune id> || "(" || args || ")"
             runeid, _, enil = line[1:].partition("(")
             args, _, _, = enil.rpartition(")")
-            yield Token.rune, (runeid, lex_argstr(args))
+            yield TOKEN_RUNE, (runeid, lex_argstr(args))
 
         elif line.startswith(";"):
             # This is a comment.
-            yield Token.comment, line[1:]
+            yield TOKEN_COMMENT, line[1:]
 
         else:
             line = line.strip()
             if len(line) > 0:
-                yield Token.text, line
+                yield TOKEN_TEXT, line
             else:
-                yield Token.blank, None
-
-
-class Node:
-    # Kinds of node.
-    root = 0
-    rune = 1
-    raw = 2
-    heading = 3
-    text = 4
-    blank = 5
-
-    def __init__(self, kind, value):
-        self.kind = kind
-        self.value = value
-        self.nodes = []
+                yield TOKEN_BLANK, None
 
 
 # Map of tokens to corresponding nodes.
-parser_token_map = {
-    Token.rune:     Node.rune,
-    Token.raw:      Node.raw,
-    Token.heading:  Node.heading,
-    Token.text:     Node.text,
-    Token.blank:    Node.blank
+NODE_TOKEN_MAP = {
+    TOKEN_RUNE:     NODE_RUNE,
+    TOKEN_RAW:      NODE_RAW,
+    TOKEN_HEADING:  NODE_HEADING,
+    TOKEN_TEXT:     NODE_TEXT,
+    TOKEN_BLANK:    NODE_BLANK
 }
 
 
 def parse(tokens):
+    """Parse a series of tokens into a scroll tree."""
     indent = 0
     prev_indent = 0
-    root = Node(Node.root, None)
+    root = Node(NODE_ROOT, None)
     scope_stack = []
     scope_cur = root
     prev_node = root
 
     for toksym, tokval in tokens:
         # Determine indentation level.
-        if toksym is Token.indent:
+        if toksym is TOKEN_INDENT:
             # Ignore extra indents.
             indent += 0 if indent > prev_indent else 1
             continue
 
         # Construct a node from a token symbol, if possible.
         node = None
-        if toksym in parser_token_map:
-            node = Node(parser_token_map[toksym], tokval)
+        if toksym in NODE_TOKEN_MAP:
+            node = Node(NODE_TOKEN_MAP[toksym], tokval)
 
-        if node.kind is Node.blank:
+        if node.kind is NODE_BLANK:
             # Blank nodes should not affect the scope.
             indent = prev_indent
             # Consecutive blank nodes sould not be emitted.
-            if prev_node.kind is Node.blank:
+            if prev_node.kind is NODE_BLANK:
                 node = None
 
         elif indent > prev_indent:
@@ -231,11 +209,4 @@ def parse(tokens):
         indent = 0
 
     return root
-
-
-def print_tree(node, depth=0):
-    idnt = depth - 1
-    bnch = 0 if idnt < 0 else 1
-    print(" |  " * idnt + " |->" * bnch, node.kind, node.value)
-    for n in node.nodes:
-        print_tree(n, depth + 1)
+    
