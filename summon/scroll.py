@@ -193,15 +193,14 @@ def parse(tokens):
 
         # Construct a node from a token symbol, if possible.
         node = None
-        if toksym in NODE_TOKEN_MAP:
-            node = Node(NODE_TOKEN_MAP[toksym], tokval)
-            # Special handling for blank nodes.
-            if node.kind is NODE_BLANK:
-                # Blank nodes should not affect the scope.
-                indent = prev_indent
-                # Consecutive blank nodes sould not be emitted.
-                if prev_node.kind is NODE_BLANK:
-                    node = None
+        if toksym not in NODE_TOKEN_MAP:
+            continue
+
+        node = Node(NODE_TOKEN_MAP[toksym], tokval)
+        # Special handling for blank nodes.
+        if node.kind is NODE_BLANK:
+            # Blank nodes should not affect the scope.
+            indent = prev_indent
 
         elif indent > prev_indent:
             # Push current scope to the scope stack.

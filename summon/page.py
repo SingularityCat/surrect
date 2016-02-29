@@ -44,20 +44,25 @@ class Page:
             self.tree = scroll.parse(scroll.lex(source))
 
     def build_page(self):
-        tree = self.tree.deepcopy()
-        evaluate_tree(tree, self.context.copy())
-        #flatten(self.tree)
-        collate(tree)
+        ntree = self.tree.deepcopy()
+        evaluate(ntree, self.context.copy())
+        #flatten(ntree)
+        collate(ntree)
         return render(tree)
 
 
-def evaluate_tree(node, context):
+def evaluate(node, context):
     nodes = node.nodes
     i = 0
     while i < len(nodes):
+        # Runes are allowed to evaluate to 0 -> n arbitrary nodes.
+        # Other nodes may only evaluate to themselves.
+        # As runes can produce runes, they need to be reeavaluated.
+        # This allows for some nifty recursion.
         if nodes[i].kind is tree.NODE_RUNE:
-            nodes[i:i+1] = evaluate_tree(nodes[i], context)
+            nodes[i:i+1] = evaluate(nodes[i], context)
         else:
+            evaluate(nodes[i], context)
             i += 1
     if node.kind is tree.NODE_RUNE:
         rid, rargs = node.value
@@ -100,9 +105,9 @@ def collate(coll, collators=DEFAULT_COLLATORS):
         node = next_node
 
 
-def render(tree):
+def render(ntree):
     body = []
-    for node in tree:
+    for node in ntree.nodes:
         if node.kind is tree.NODE_RAW:
             body.append(node.value)
         elif node.kind is tree.NODE_HEADING:

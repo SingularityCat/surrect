@@ -13,14 +13,14 @@ NODE_TEXT = "text"
 NODE_BLANK = "blank"
 
 
-# Set of node types, for simple tests.
+# Dict of node types, for inclusion in namespaces and simple tests.
 NODE_TYPES = {
-    NODE_ROOT,
-    NODE_RUNE,
-    NODE_RAW,
-    NODE_HEADING,
-    NODE_TEXT,
-    NODE_BLANK
+    "NODE_ROOT": NODE_ROOT,
+    "NODE_ROOT": NODE_RUNE,
+    "NODE_RAW": NODE_RAW,
+    "NODE_HEADING": NODE_HEADING,
+    "NODE_TEXT": NODE_TEXT,
+    "NODE_BLANK": NODE_BLANK
 }
 
 
@@ -31,7 +31,7 @@ class NodeError(Exception):
 class Node:
     """A node in a tree."""
     def __init__(self, kind, value):
-        if kind not in NODE_TYPES:
+        if kind not in NODE_TYPES.values():
             raise NodeError("Not a valid node type.")
         self.kind = kind
         self.value = value
