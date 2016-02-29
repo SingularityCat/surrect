@@ -18,14 +18,14 @@ def register(runeid, runefunc):
 
 
 def lookup(runeid):
+    if runeid not in runes:
+        runeid = "noop"
     return runes[runeid]
 
 
 def rune(runeid):
     """Rune decorator function."""
-    def regrune(runefunc):
-        register(runeid, runefunc)
-    return regrune
+    return lambda runefunc: register(runeid, runefunc)
 
 
 def load(fpath):
@@ -35,3 +35,8 @@ def load(fpath):
         }
         code = compile(src.read(), fpath, "exec",)
         exec(code, runescope)
+
+
+@rune("noop")
+def noop(*args, nodes=None, context=None):
+    return []
