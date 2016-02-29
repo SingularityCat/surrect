@@ -12,9 +12,9 @@ Any line type can be indented, including comments.
 Indentation is done with groups of four spaces.
 After processing any indentation, the first character of a line
 determines what kind of node it forms.
- - "#"  = Heading marker.
+ - "="  = Heading marker.
  - ":"  = Rune specifier.
- - ";"  = Comment.
+ - "#"  = Comment.
  - "!"  = Raw line.
  - "\n" or just whitespace = Separator
  - Anything else: Normal line.
@@ -26,9 +26,9 @@ BNF:
 
 <rune> ::= <indent> ":" <identifier> "(" <argstr> ")"
 <raw> ::= <indent> "!" <string>
-<heading> ::= <indent> "#" <string>
+<heading> ::= <indent> "=" <string>
 <text> ::= <indent> <string>
-<comment> ::= <indent> ";" <string>
+<comment> ::= <indent> "#" <string>
 
 <argstr> ::= <quoted string> | <argstr> "," <quoted string>
 """
@@ -47,10 +47,28 @@ ESCAPE_MAP = {
     "a": "\a",  # bell
     "b": "\b",  # backspace
     "f": "\f",  # FF (form feed)
-    "\"": "\"",
-    "\'": "\'",
-    "\\": "\\",
 }
+
+
+def build_string(string, sentinel, escape="\\", escmap=ESCAPE_MAP):
+    """
+    Read characters from a string until a sentinel is met.
+    Supports arbitrary escape characters. Both the sentinel
+    and the escape can be escaped.
+    Returns a list of characters read.
+    """
+    charlst = []
+    escaped = False
+    for char in string:
+        if char == escape:
+            escaped = True
+        elif char == sentinel and not escaped:
+            break
+        else:
+            if escaped and char in escmap:
+                char = escmap[char]
+            charlst.append(char)
+    return charlst
 
 
 def lex_argstr(argstr):
@@ -65,25 +83,19 @@ def lex_argstr(argstr):
     # strterm == None means we're not in a quoted string.
     strterm = None
     escaped = False
+    argstr = iter(argstr)
     for char in argstr:
-        if strterm is None:
-            if char == "\"" or char == "\'":
-                strterm = char
-            elif char == ",":
-                argv.append("".join(curarg))
-                curarg = []
+        if char == "\"" or char == "\'":
+            strterm = char
+        elif char == ",":
+            argv.append("".join(curarg))
+            curarg = []
             # Ignore anything else.
-        elif char == "\\":
-            escaped = True
-        else:
-            if char == strterm and not escaped:
-                strterm = None
-            else:
-                if escaped and char in ESCAPE_MAP:
-                    char = ESCAPE_MAP[char]
-                curarg.append(char)
-    if strterm is not None:
-        argv.append("".join(curarg))
+
+        if strterm is not None:
+            curarg += build_string(argstr, strterm)
+            strterm = None
+    argv.append("".join(curarg))
     return argv
 
 
@@ -131,9 +143,9 @@ def lex(source):
             # Raw lines are unstripped.
             yield (TOKEN_RAW, line[1:])
 
-        elif line.startswith("#"):
-            level = charcount(line, "#")
-            yield TOKEN_HEADING, (level, line.strip("#" + whitespace))
+        elif line.startswith("="):
+            level = charcount(line, "=")
+            yield TOKEN_HEADING, (level, line.strip("=" + whitespace))
 
         elif line.startswith(":"):
             # Runes have the form:
@@ -142,7 +154,7 @@ def lex(source):
             args, _, _, = enil.rpartition(")")
             yield TOKEN_RUNE, (runeid, lex_argstr(args))
 
-        elif line.startswith(";"):
+        elif line.startswith("#"):
             # This is a comment.
             yield TOKEN_COMMENT, line[1:]
 
@@ -184,13 +196,13 @@ def parse(tokens):
         node = None
         if toksym in NODE_TOKEN_MAP:
             node = Node(NODE_TOKEN_MAP[toksym], tokval)
-
-        if node.kind is NODE_BLANK:
-            # Blank nodes should not affect the scope.
-            indent = prev_indent
-            # Consecutive blank nodes sould not be emitted.
-            if prev_node.kind is NODE_BLANK:
-                node = None
+            # Special handling for blank nodes.
+            if node.kind is NODE_BLANK:
+                # Blank nodes should not affect the scope.
+                indent = prev_indent
+                # Consecutive blank nodes sould not be emitted.
+                if prev_node.kind is NODE_BLANK:
+                    node = None
 
         elif indent > prev_indent:
             # Push current scope to the scope stack.
@@ -209,4 +221,4 @@ def parse(tokens):
         indent = 0
 
     return root
-    
+
