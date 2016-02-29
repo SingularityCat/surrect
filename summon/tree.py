@@ -49,6 +49,7 @@ class Node:
         node.nodes = [node.deepcopy() for node in self.nodes]
         return node
 
+
 def print_tree(nodeish, depth=0):
     """Print a tree of nodes."""
     idnt = depth - 1
@@ -63,3 +64,4 @@ def print_tree(nodeish, depth=0):
     print(" |  " * idnt + " |->" * bnch, kind, value)
     for node in nodes:
         print_tree(node, depth + 1)
+

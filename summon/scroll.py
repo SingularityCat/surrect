@@ -82,7 +82,6 @@ def lex_argstr(argstr):
     curarg = []
     # strterm == None means we're not in a quoted string.
     strterm = None
-    escaped = False
     argstr = iter(argstr)
     for char in argstr:
         if char == "\"" or char == "\'":
