@@ -1,5 +1,5 @@
 """
-page - Contains classes and functions for handling pages.
+content - Contains classes and functions for handling page content.
 """
 
 import html
@@ -9,8 +9,8 @@ from . import scroll
 from . import tree
 
 
-class Page:
-    """Page class"""
+class Content:
+    """Content class"""
 
     def __init__(self, filepath):
         self.filepath = filepath
