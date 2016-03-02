@@ -65,3 +65,59 @@ def print_tree(nodeish, depth=0):
     for node in nodes:
         print_tree(node, depth + 1)
 
+
+# ### Node collation functions ###
+# Code related to collecting and combining nodes.
+
+
+def collect_nodes(kind, collection, gen):
+    """
+    Collects nodes with a given kind from a generator,
+    and puts them in the provided list.
+    Returns the first node from the generator that does not
+    match the provided kind.
+    """
+    tail = None
+    for node in gen:
+        if node.kind is not kind:
+            tail = node
+            break
+        else:
+            collection.append(node)
+    return tail
+
+# Default collation actions
+# - text gets stripped and joined on space,
+# - raw gets combined on newline.
+DEFAULT_COLLATORS = {
+    NODE_TEXT: (" ", lambda n: n.strip()),
+    NODE_RAW:  ("\n", lambda n: n)
+}
+
+
+def collate(root, collators=DEFAULT_COLLATORS):
+    """
+    Node collator. Modifies tree in place.
+    Takes two arguments, a root node, and a dict of collation functions.
+    Each key in this dict is a node kind,
+    and each value is a string, function pair.
+    The string being the joining string (see str.join) and the function
+    turning a given node into a string.
+    """
+    nodegen = iter(root.nodes)
+    root.nodes = []
+
+    node = next(nodegen, None)
+    while node is not None:
+        root.nodes.append(node)
+        if node.kind in collators:
+            adjns = [node]
+            next_node = collect_nodes(node.kind, adjns, nodegen)
+            jc, fn = collators[node.kind]
+            node.value = jc.join(fn(n.value) for n in adjns)
+        else:
+            next_node = next(nodegen, None)
+        node = next_node
+
+
+
