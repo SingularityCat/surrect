@@ -1,10 +1,24 @@
+from os import walk, path
 from sys import path
 from configparser import SafeConfigParser as ConfigParser
 
-from . import rune 
+from . import rune
 from . import scroll
 from . import tree
 
+def build_site_dict(rootdir):
+    site = {}
+    for curdir, dirs, files in walk(rootdir):
+        cat_info = {
+            "cat": path.basename(curdir).title(),
+            "ref": None
+            
+        }
+
+        if "cat" in files:
+            catpath = path.join(curdir, "cat")
+
+        site[curdir] = cat_info
 
 DEFAULT_CONFIG = {
     "summon": {

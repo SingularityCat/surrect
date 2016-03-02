@@ -1,5 +1,5 @@
 """
-content - Contains classes and functions for handling page content.
+page - Contains classes and functions for handling pages.
 """
 
 from . import rune
@@ -8,8 +8,8 @@ from . import tree
 from . import render
 
 
-class Content:
-    """Content class"""
+class Page:
+    """Page class"""
 
     def __init__(self, filepath):
         self.filepath = filepath
