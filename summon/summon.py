@@ -5,20 +5,24 @@ from configparser import SafeConfigParser as ConfigParser
 from . import rune
 from . import scroll
 from . import tree
+from . import toc
 
-def build_site_dict(rootdir):
-    site = {}
-    for curdir, dirs, files in walk(rootdir):
-        cat_info = {
-            "cat": path.basename(curdir).title(),
-            "ref": None
-            
-        }
+def scan_category(path):
+    catdict = {
+        "name": path.basename(path).title(),
+        "index": None
+    }
+    entries = []
+    exclude = set()
 
-        if "cat" in files:
-            catpath = path.join(curdir, "cat")
+    with open(path, "r") as catfile:
+        cd, en, ex = scroll.catparse(scroll.catlex(catfile))
+        catdict.update(cd)
+        entries = en
+        exclude = ex
 
-        site[curdir] = cat_info
+    tocnode = toc.TocNode(catdict["name"], catdict["index"])
+
 
 DEFAULT_CONFIG = {
     "summon": {

@@ -1,5 +1,5 @@
 """
-scroll - module for understanding scroll.
+scroll - module for understanding scrolls and catfiles.
 
 Scroll is a simple markup language for summon.
 
@@ -31,6 +31,21 @@ BNF:
 <comment> ::= <indent> "#" <string>
 
 <argstr> ::= <quoted string> | <argstr> "," <quoted string>
+
+
+Catfiles are simple key, value pair files, designed to hold
+information about a category and how it sould be constructed.
+
+Parsed catfiles have 5 valid keys, "name", "index",
+"page", "link" and "exclude".
+
+Catfiles have the from:
+<catfile> ::= <kvp> | <catfile> "\\n" <kvp>
+
+<kvp> ::= <key> : <value>
+<key> ::= "name" | "index" | "page" | "link" | "exclude"
+<value> ::= <argstr>
+
 """
 
 from string import whitespace
@@ -71,7 +86,7 @@ def build_string(string, sentinel, escape="\\", escmap=ESCAPE_MAP):
     return charlst
 
 
-def lex_argstr(argstr):
+def build_strlist(argstr):
     """
     Turns a string representing a list of strings, into a list of strings.
     Strings are either "quoted" or 'quoted', and are comma separated.
@@ -151,7 +166,7 @@ def lex(source):
             # ":" || <rune id> || "(" || args || ")"
             runeid, _, enil = line[1:].partition("(")
             args, _, _, = enil.rpartition(")")
-            yield TOKEN_RUNE, (runeid, lex_argstr(args))
+            yield TOKEN_RUNE, (runeid, build_strlist(args))
 
         elif line.startswith("#"):
             # This is a comment.
@@ -219,4 +234,30 @@ def parse(tokens):
         indent = 0
 
     return root
+
+
+# Functions for lexing/parsing 'catfiles'.
+
+def catlex(source):
+    for cfl in source:
+        k, _, v = cfl.partition(":")
+        yield k.strip(), v.strip()
+
+
+def catparse(tokens):
+    catdict = {}
+    entries = []
+    exclude = set()
+    for k, v in tokens:
+        if k in {"name", "index"}:
+            catdict[k] = v
+        elif k in {"page", "link"}:
+            vn = build_strlist(v)[:2]
+            if len(vn) > 0:
+                if len(vn) == 1:
+                    vn[1] = vn[0]
+                entries.append((k, tuple(vn)))
+        elif k == "exclude" or k == "ignore":
+            exclude.add(v)
+    return catdict, entries, exclude
 
