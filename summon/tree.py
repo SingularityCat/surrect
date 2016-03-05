@@ -39,13 +39,13 @@ class Node:
 
     def copy(self):
         """Create a shallow copy of a node."""
-        node = Node(self.kind, self.value)
+        node = type(self)(self.kind, self.value)
         node.nodes = self.nodes[:]
         return node
 
     def deepcopy(self):
         """Create a deep copy of a node."""
-        node = Node(self.kind, self.value)
+        node = type(self)(self.kind, self.value)
         node.nodes = [node.deepcopy() for node in self.nodes]
         return node
 
