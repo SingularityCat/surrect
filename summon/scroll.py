@@ -49,6 +49,7 @@ Catfiles have the from:
 """
 
 from string import whitespace
+from collections import namedtuple
 from .tree import Node, NODE_ROOT, NODE_RUNE, NODE_RAW, \
     NODE_HEADING, NODE_TEXT, NODE_BLANK
 
@@ -65,9 +66,9 @@ ESCAPE_MAP = {
 }
 
 
-def build_string(string, sentinel, escape="\\", escmap=ESCAPE_MAP):
+def eat_string(string, sentinel, escape="\\", escmap=ESCAPE_MAP):
     """
-    Read characters from a string until a sentinel is met.
+    Read characters from an iterable until a sentinel is met.
     Supports arbitrary escape characters. Both the sentinel
     and the escape can be escaped.
     Returns a list of characters read.
@@ -86,7 +87,17 @@ def build_string(string, sentinel, escape="\\", escmap=ESCAPE_MAP):
     return charlst
 
 
-def build_strlist(argstr):
+def interpret_str(string):
+    """Interpret a string representation of a string."""
+    charsrc = iter(string)
+    for char in charsrc:
+        if char == "\"" or char == "\'":
+            return "".join(eat_string(charsrc, char))
+    else:
+        return "".join(eat_string(string, None))
+
+
+def interpret_strlist(argstr):
     """
     Turns a string representing a list of strings, into a list of strings.
     Strings are either "quoted" or 'quoted', and are comma separated.
@@ -107,11 +118,30 @@ def build_strlist(argstr):
             # Ignore anything else.
 
         if strterm is not None:
-            curarg += build_string(argstr, strterm)
+            curarg += eat_string(argstr, strterm)
             strterm = None
     argv.append("".join(curarg))
     return argv
 
+
+BOOLEAN_STRINGS = {
+    "on": True,
+    "true": True,
+    "1": True,
+    "yes": True,
+    "off": False,
+    "false": False,
+    "0": False,
+    "no": False
+}
+
+def interpret_bool(string, string_table=BOOLEAN_STRINGS):
+    """Interpret a boolean string."""
+    value = None
+    string = string.strip().lower()
+    if string in string_table:
+        value = string_table[string]
+    return value
 
 def gensplit(src, sep):
     """Generator version of str.split"""
@@ -166,7 +196,7 @@ def lex(source):
             # ":" || <rune id> || "(" || args || ")"
             runeid, _, enil = line[1:].partition("(")
             args, _, _, = enil.rpartition(")")
-            yield TOKEN_RUNE, (runeid, build_strlist(args))
+            yield TOKEN_RUNE, (runeid, interpret_strlist(args))
 
         elif line.startswith("#"):
             # This is a comment.
@@ -238,6 +268,8 @@ def parse(tokens):
 
 # Functions for lexing/parsing 'catfiles'.
 
+CatEntry = namedtuple("CatEntry", ["kind", "name", "path"])
+
 def catlex(source):
     for cfl in source:
         k, _, v = cfl.partition(":")
@@ -250,14 +282,20 @@ def catparse(tokens):
     exclude = set()
     for k, v in tokens:
         if k in {"name", "index"}:
-            catdict[k] = v
-        elif k in {"page", "link"}:
-            vn = build_strlist(v)[:2]
+            catdict[k] = interpret_str(v)
+        elif k in {"scan"}:
+            catdict[k] = interpret_bool(v)
+        elif k in {"subcat", "page", "link"}:
+            # These types are all "kind: [name] path"
+            vn = interpret_strlist(v)[:2]
             if len(vn) > 0:
                 if len(vn) == 1:
+                    # Move value along, set name to None.
                     vn[1] = vn[0]
-                entries.append((k, tuple(vn)))
+                    vn[0] = None
+                entries.append(CatEntry(k, *vn))
         elif k == "exclude" or k == "ignore":
             exclude.add(v)
-    return catdict, entries, exclude
+    catdict["entries"] = entries
+    return catdict, exclude
 
