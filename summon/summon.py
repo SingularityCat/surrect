@@ -1,5 +1,6 @@
+from functools import partial
+from collections import OrderedDict
 from os import listdir, path
-from collections import OrderedDict, namedtuple
 from configparser import SafeConfigParser as ConfigParser
 
 from . import rune
@@ -83,16 +84,18 @@ def category_build(catpath, pageset, phy_root, log_root,
     if catcfg["index"] is not None:
         inpath = path.normpath(path.join(catpath, catcfg["index"]))
         outpath = pathfunc(inpath)
+        linkpath = path.join(log_root, path.relpath(outpath, phy_root))
         if path.exists(inpath):
             idxpage = page.Page(inpath)
             pageset[outpath] = idxpage
-            catdict[None] = pathfunc(outpath)
+            catdict[None] = linkpath
 
     for ent in catcfg["entries"]:
         ename = ent.name
         # Category and scroll paths are all relative to thier directory.
         inpath = path.normpath(path.join(catpath, ent.path))
         outpath = pathfunc(inpath)
+        linkpath = path.join(log_root, path.relpath(outpath, phy_root))
         if ent.path in exclude:
             continue
 
@@ -104,7 +107,7 @@ def category_build(catpath, pageset, phy_root, log_root,
             catdict[ename] = cd2
             exclude.add(ent.path)
         elif ent.kind == "page" and path.exists(inpath):
-            p = page.Page(inpath)
+            p = page.Page(inpath, linkpath)
             p.read_metadata()
             pageset[outpath] = p
             if ename is None:
@@ -112,13 +115,14 @@ def category_build(catpath, pageset, phy_root, log_root,
                     ename = p.context["name"]
                 else:
                     ename = path.splitext(path.basename(ent.path))[0].title()
-            catdict[ename] = path.relpath(outpath, phy_root)
+            catdict[ename] = linkpath
             exclude.add(ent.path)
         elif ent.kind == "link":
             if ename is None:
                 ename = ent.path
             catdict[ename] = ent.path
     return catcfg["name"], catdict
+
 
 DEFAULT_CONFIG = {
     "summon": {
@@ -128,7 +132,7 @@ DEFAULT_CONFIG = {
         "build dir": "build"
     },
     "page": {
-        "page order": "header main nav footer"
+        "order": "header main nav footer"
     },
     "nav": {
         "nav init": "<nav id=\"leftnav\">",

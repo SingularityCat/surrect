@@ -11,8 +11,9 @@ from . import render
 class Page:
     """Page class"""
 
-    def __init__(self, filepath):
+    def __init__(self, filepath, linkpath):
         self.filepath = filepath
+        self.linkpath = linkpath
         self.context = {}
         self.tree = None
 
@@ -35,7 +36,7 @@ class Page:
                     self.context[key] = value
             lexer.close()
 
-    def read_tree(self):
+    def read_scroll(self):
         """
         Reads and builds an entire scroll tree from a scroll file.
         """
