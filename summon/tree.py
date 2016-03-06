@@ -16,7 +16,7 @@ NODE_BLANK = "blank"
 # Dict of node types, for inclusion in namespaces and simple tests.
 NODE_TYPES = {
     "NODE_ROOT": NODE_ROOT,
-    "NODE_ROOT": NODE_RUNE,
+    "NODE_RUNE": NODE_RUNE,
     "NODE_RAW": NODE_RAW,
     "NODE_HEADING": NODE_HEADING,
     "NODE_TEXT": NODE_TEXT,
