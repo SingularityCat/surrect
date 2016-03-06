@@ -1,5 +1,5 @@
 from os import listdir, path
-from collections import OrderedDict
+from collections import OrderedDict, namedtuple
 from configparser import SafeConfigParser as ConfigParser
 
 from . import rune
@@ -12,46 +12,93 @@ def scroll_html_pfunc(pth):
     return path.splitext(pth)[0] + ".html"
 
 
-def scan_category(cpath, pageset, phy_root, pathfunc=scroll_html_pfunc):
-    cfpath = cpath
-    if path.isdir(cpath):
-        cfpath = path.join(cpath, "cat")
+def category_get_catcfg(catpath):
+    """
+    Determines a category configuration.
+    A category config is a dict, containing
+     - name
+     - index : str, physical path to a scroll for use as a category index.
+     - scan : bool, is this category configured to do scanning?
+     - entries : list of (str, str/None, str) named tuples: type, name, path.
+     - exclude : set os str, paths to exclude.
+     - catpath : str, the prefix for all physical paths in this category.
+    Returns said dict.
+    """
+    # Normalise the path.
+    catpath = path.normpath(catpath)
+    # Choose a default name based on the last part of the path.
+    default_name = path.basename(catpath).strip().title()
+    cfpath = catpath
+    if path.isdir(catpath):
+        cfpath = path.join(catpath, "cat")
     else:
-        cpath = path.dirname(cpath)
+        catpath = path.dirname(catpath)
 
     catcfg = {
-        "name": path.basename(cpath).title(),
+        "name": default_name,
         "index": None,
         "scan": True,
-        "entries": []
+        "entries": [],
+        "exclude": set(),
+        "catpath": catpath
     }
-    exclude = set()
-    catdict = OrderedDict()
 
     if path.exists(cfpath):
         with open(cfpath, "r") as catfile:
-            cc, ex = scroll.catparse(scroll.catlex(catfile))
+            cc = scroll.catparse(scroll.catlex(catfile))
             catcfg.update(cc)
-            exclude.union(ex)
+    return catcfg
+
+
+def category_scan(catcfg):
+    """
+    Adds all files in a directory to the end of the
+    entries list in a category configuration.
+    This does not make use of, or update the 'exclude' set.
+    Nor does it honour the 'scan' property.
+    """
+    catpath = catcfg["catpath"]
+    for p in listdir(catpath):
+        rp = path.join(catpath, p)
+        if path.isdir(rp):
+            sce = scroll.CatEntry("subcat", None, p)
+            catcfg["entries"].append(sce)
+        elif path.exists(rp) and rp.endswith(".scroll"):
+            sce = scroll.CatEntry("page", None, p)
+            catcfg["entries"].append(sce)
+
+
+def category_build(catpath, pageset, phy_root, log_root,
+                   pathfunc=scroll_html_pfunc):
+    # Get the category configuration.
+    catcfg = category_get_catcfg(catpath)
+    catpath = catcfg["catpath"]
+    exclude = catcfg["exclude"]
+    # The category dict.
+    catdict = OrderedDict()
 
     if catcfg["scan"]:
-        for p in listdir(cpath):
-            rp = path.join(cpath, p)
-            if path.isdir(rp):
-                sce = scroll.CatEntry("subcat", None, p)
-                catcfg["entries"].append(sce)
-            elif rp.endswith(".scroll"):
-                sce = scroll.CatEntry("page", None, p)
-                catcfg["entries"].append(sce)
+        category_scan(catcfg)
 
-    # Deal with explicit items first.
+    if catcfg["index"] is not None:
+        inpath = path.normpath(path.join(catpath, catcfg["index"]))
+        outpath = pathfunc(inpath)
+        if path.exists(inpath):
+            idxpage = page.Page(inpath)
+            pageset[outpath] = idxpage
+            catdict[None] = pathfunc(outpath)
+
     for ent in catcfg["entries"]:
         ename = ent.name
-        inpath = path.join(cpath, ent.path)
+        # Category and scroll paths are all relative to thier directory.
+        inpath = path.normpath(path.join(catpath, ent.path))
         outpath = pathfunc(inpath)
+        if ent.path in exclude:
+            continue
 
         if ent.kind == "subcat":
-            cn2, cd2 = scan_category(inpath, pageset, phy_root, pathfunc)
+            cn2, cd2 = category_build(inpath, pageset, phy_root, log_root,
+                                      pathfunc)
             if ename is None:
                 ename = cn2
             catdict[ename] = cd2
@@ -60,7 +107,6 @@ def scan_category(cpath, pageset, phy_root, pathfunc=scroll_html_pfunc):
             p = page.Page(inpath)
             p.read_metadata()
             pageset[outpath] = p
-            # Name from catfile overrides page context
             if ename is None:
                 if "name" in p.context:
                     ename = p.context["name"]
@@ -110,5 +156,3 @@ def make_default_config():
         for opt, val in opts.items():
             cfg[sect][opt] = val
     return cfg
-
-
