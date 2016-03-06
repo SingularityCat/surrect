@@ -48,4 +48,3 @@ class Page:
         #tree.flatten(ntree)
         tree.collate(ntree)
         return render.render(tree)
-

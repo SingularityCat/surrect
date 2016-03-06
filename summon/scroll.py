@@ -135,6 +135,7 @@ BOOLEAN_STRINGS = {
     "no": False
 }
 
+
 def interpret_bool(string, string_table=BOOLEAN_STRINGS):
     """Interpret a boolean string."""
     value = None
@@ -142,6 +143,7 @@ def interpret_bool(string, string_table=BOOLEAN_STRINGS):
     if string in string_table:
         value = string_table[string]
     return value
+
 
 def gensplit(src, sep):
     """Generator version of str.split"""
@@ -270,6 +272,7 @@ def parse(tokens):
 
 CatEntry = namedtuple("CatEntry", ["kind", "name", "path"])
 
+
 def catlex(source):
     for cfl in source:
         k, _, v = cfl.partition(":")
@@ -297,5 +300,5 @@ def catparse(tokens):
         elif k == "exclude" or k == "ignore":
             exclude.add(v)
     catdict["entries"] = entries
-    return catdict, exclude
-
+    catdict["exclude"] = exclude
+    return catdict

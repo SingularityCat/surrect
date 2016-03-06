@@ -34,7 +34,7 @@ def rune(runeid):
 
 
 def load(fpath):
-    """Load a rune function."""
+    """Load a rune module."""
     with open(fpath, "r") as src:
         runescope = {
             "rune": rune,
@@ -75,4 +75,3 @@ def inscribe(node, context):
 def noop_rune(*args, nodes=None, context=None):
     """Rune that returns an empty list."""
     return []
-

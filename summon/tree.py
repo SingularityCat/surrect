@@ -49,6 +49,11 @@ class Node:
         node.nodes = [node.deepcopy() for node in self.nodes]
         return node
 
+    def __eq__(self, n):
+        """Test for equality"""
+        eq = self.kind == n.kind and self.value == n.value
+        return eq and self.nodes == n.nodes
+
 
 def print_tree(nodeish, depth=0):
     """Print a tree of nodes."""
@@ -118,6 +123,3 @@ def collate(root, collators=DEFAULT_COLLATORS):
         else:
             next_node = next(nodegen, None)
         node = next_node
-
-
-

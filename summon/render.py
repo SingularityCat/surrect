@@ -39,4 +39,3 @@ def render(ntree, renderfuncs=HTML_RENDERFUNCS):
     for node in ntree.nodes:
         body.append(render_node(node, renderfuncs))
     return "".join(body)
-
