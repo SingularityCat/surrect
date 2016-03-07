@@ -43,9 +43,9 @@ class Page:
         with open(self.filepath, "r") as source:
             self.tree = scroll.parse(scroll.lex(source))
 
-    def build_page(self):
+    def build_main(self):
         ntree = self.tree.deepcopy()
         rune.inscribe(ntree, self.context.copy())
         #tree.flatten(ntree)
         tree.collate(ntree)
-        return render.render(tree)
+        return render.render(ntree)
