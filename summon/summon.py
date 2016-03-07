@@ -1,5 +1,6 @@
 from functools import partial
 from collections import OrderedDict
+from collections.abc import Mapping
 from os import listdir, path
 from configparser import SafeConfigParser as ConfigParser
 
@@ -124,6 +125,73 @@ def category_build(catpath, pageset, phy_root, log_root,
     return catcfg["name"], catdict
 
 
+def generate_page_builder(cfg, catdict):
+    section_order = [sec.strip() for sec in cfg["page"]["order"].split(" ")]
+
+    def category_render(catname, catdat, curlink):
+        if catname is not None:
+            if None in catdat:
+                yield cfg["nav"]["indexed cat"].format(name=catname,
+                                                       link=catdat[None])
+            else:
+                yield cfg["nav"]["cat"].format(name=catname)
+
+        yield cfg["nav"]["reflist init"]
+        for name, link in catdat.items():
+            yield cfg["nav"]["ref init"]
+            if isinstance(link, Mapping):
+                yield from category_render(name, link, curlink)
+            elif link == curlink:
+                yield cfg["nav"]["ref cur"].format(name=name, link=link)
+            else:
+                yield cfg["nav"]["ref"].format(name=name, link=link)
+            yield cfg["nav"]["ref fini"]
+        yield cfg["nav"]["reflist fini"]
+
+    def do_header(page, outfile):
+        outfile.write("<header>")
+        outfile.write(cfg["header"]["format"].format(*page.context))
+        outfile.write("</header>")
+
+    def do_main(page, outfile):
+        outfile.write("<main>")
+        page.read_scroll()
+        outfile.write(page.build_main())
+        outfile.write("</main>")
+
+    def do_nav(page, outfile):
+        outfile.write("<nav>")
+        for tag in category_render(None, catdict, page.linkpath):
+            outfile.write(tag)
+        outfile.write("</nav>")
+
+    def do_footer(page, outfile):
+        outfile.write("<footer>")
+        outfile.write(cfg["footer"]["format"].format(*page.context))
+        outfile.write("</footer>")
+
+    def page_builder(page, path):
+        outfile = open(path, "w")
+        outfile.write("<head>")
+        outfile.write("<meta charset=\"UTF-8\"/>")
+        outfile.write("<title>FIXME</title>")
+        # TODO: More head section stuff.
+        outfile.write("</head>")
+        outfile.write("<body>")
+        for sec in section_order:
+            if sec == "header":
+                do_header(page, outfile)
+            elif sec == "main":
+                do_main(page, outfile)
+            elif sec == "nav":
+                do_nav(page, outfile)
+            elif sec == "footer":
+                do_footer(page, outfile)
+        outfile.write("</body>")
+
+    return page_builder
+
+
 DEFAULT_CONFIG = {
     "summon": {
         "root dir": "root",
@@ -139,10 +207,12 @@ DEFAULT_CONFIG = {
         "nav fini": "</nav>",
         "cat": "<h1>{name}</h1>",
         "indexed cat": "<a href=\"{link}\"><h1>{name}</h1></a>",
-        "ref init": "<ul>",
-        "ref": "<li><a href={link}>{name}</a></li>",
-        "ref cur": "<li><a href=\"{link}\">{name}</a></li>",
-        "ref fini": "</ul>"
+        "reflist init": "<ul>",
+        "ref init": "<li>",
+        "ref fini": "</li>",
+        "ref": "<a href={link}>{name}</a>",
+        "ref cur": "<a class=\"curlnk\" href=\"{link}\">{name}</a>",
+        "reflist fini": "</ul>"
     },
     "header": {
         "format": ""
