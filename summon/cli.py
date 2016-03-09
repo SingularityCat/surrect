@@ -33,7 +33,7 @@ arg_parser.add_argument("-g", "--gen",
 
 arg_parser.add_argument("-o", "--force",
     dest="force", action="store_true", default=False,
-    help="Overwrite an existing Summonfile"
+    help="Overwrite files"
 )
 
 
@@ -42,10 +42,14 @@ def main():
     cfg = make_default_config()
 
     if args.mode == "gen":
-        if args.force or not path.exists(args.summonfile):
-            cfg.write(args.summonfile)
+        if args.noop:
             return 0
-        else
+
+        if args.force or not path.exists(args.summonfile):
+            with open(args.summonfile, "w") as sfile:
+                cfg.write(sfile)
+                return 0
+        else:
             return 1
 
     cfg.read(args.summonfile)
