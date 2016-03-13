@@ -8,173 +8,66 @@ from . import rune
 from . import scroll
 from . import tree
 from . import page
-
-
-def scroll_html_pfunc(pth):
-    return path.splitext(pth)[0] + ".html"
-
-
-def category_get_catcfg(catpath):
-    """
-    Determines a category configuration.
-    A category config is a dict, containing
-     - name
-     - index : str, physical path to a scroll for use as a category index.
-     - scan : bool, is this category configured to do scanning?
-     - entries : list of (str, str/None, str) named tuples: type, name, path.
-     - exclude : set os str, paths to exclude.
-     - catpath : str, the prefix for all physical paths in this category.
-    Returns said dict.
-    """
-    # Normalise the path.
-    catpath = path.normpath(catpath)
-    # Choose a default name based on the last part of the path.
-    default_name = path.basename(catpath).strip().title()
-    cfpath = catpath
-    if path.isdir(catpath):
-        cfpath = path.join(catpath, "cat")
-    else:
-        catpath = path.dirname(catpath)
-
-    catcfg = {
-        "name": default_name,
-        "index": None,
-        "scan": True,
-        "entries": [],
-        "exclude": set(),
-        "catpath": catpath
-    }
-
-    if path.exists(cfpath):
-        with open(cfpath, "r") as catfile:
-            cc = scroll.catparse(scroll.catlex(catfile))
-            catcfg.update(cc)
-    return catcfg
-
-
-def category_scan(catcfg):
-    """
-    Adds all files in a directory to the end of the
-    entries list in a category configuration.
-    This does not make use of, or update the 'exclude' set.
-    Nor does it honour the 'scan' property.
-    """
-    catpath = catcfg["catpath"]
-    for p in listdir(catpath):
-        rp = path.join(catpath, p)
-        if path.isdir(rp):
-            sce = scroll.CatEntry("subcat", None, p)
-            catcfg["entries"].append(sce)
-        elif path.exists(rp) and rp.endswith(".scroll"):
-            sce = scroll.CatEntry("page", None, p)
-            catcfg["entries"].append(sce)
-
-
-def category_build(catpath, pageset, phy_root, log_root,
-                   pathfunc=scroll_html_pfunc):
-    # Get the category configuration.
-    catcfg = category_get_catcfg(catpath)
-    catpath = catcfg["catpath"]
-    exclude = catcfg["exclude"]
-    # The category dict.
-    catdict = OrderedDict()
-
-    if catcfg["scan"]:
-        category_scan(catcfg)
-
-    if catcfg["index"] is not None:
-        inpath = path.normpath(path.join(catpath, catcfg["index"]))
-        outpath = pathfunc(inpath)
-        linkpath = path.join(log_root, path.relpath(outpath, phy_root))
-        if path.exists(inpath):
-            idxpage = page.Page(inpath)
-            pageset[outpath] = idxpage
-            catdict[None] = linkpath
-
-    for ent in catcfg["entries"]:
-        ename = ent.name
-        # Category and scroll paths are all relative to thier directory.
-        inpath = path.normpath(path.join(catpath, ent.path))
-        outpath = pathfunc(inpath)
-        linkpath = path.join(log_root, path.relpath(outpath, phy_root))
-        if ent.path in exclude:
-            continue
-
-        if ent.kind == "subcat":
-            cn2, cd2 = category_build(inpath, pageset, phy_root, log_root,
-                                      pathfunc)
-            if ename is None:
-                ename = cn2
-            catdict[ename] = cd2
-            exclude.add(ent.path)
-        elif ent.kind == "page" and path.exists(inpath):
-            p = page.Page(inpath, linkpath)
-            p.read_metadata()
-            pageset[outpath] = p
-            if ename is None:
-                if "name" in p.context:
-                    ename = p.context["name"]
-                else:
-                    ename = path.splitext(path.basename(ent.path))[0].title()
-            catdict[ename] = linkpath
-            exclude.add(ent.path)
-        elif ent.kind == "link":
-            if ename is None:
-                ename = ent.path
-            catdict[ename] = ent.path
-    return catcfg["name"], catdict
+from . import nav
 
 
 def generate_page_builder(cfg, catdict):
     section_order = [sec.strip() for sec in cfg["page"]["order"].split(" ")]
 
-    def category_render(catname, catdat, curlink):
-        if catname is not None:
-            if None in catdat:
-                yield cfg["nav"]["indexed cat"].format(name=catname,
-                                                       link=catdat[None])
-            else:
-                yield cfg["nav"]["cat"].format(name=catname)
+    # Convert config things to formatter functions
+    for fmtname, fmtval in cfg["nav"].items():
+        fmtfuncs = {}
+        if fmtname == "category":
+            fmtfuncs["catfunc"] = fmtval.format
+        elif fmtname == "indexed category":
+            fmtfuncs["idxcatfunc"] = fmtval.format
+        elif fmtname == "entry list start":
+            fmtfuncs["entlstinitfunc"] = fmtval.format
+        elif fmtname == "entry list end":
+            fmtfuncs["entlstfinifunc"] = fmtval.format
+        elif fmtname == "entry start":
+            fmtfuncs["entinitfunc"] = fmtval.format
+        elif fmtname == "entry end":
+            fmtfuncs["entfinifunc"] = fmtval.format
+        elif fmtname == "link":
+            fmtfuncs["lnkfunc"] = fmtval.format
+        elif fmtname == "current link":
+            fmtfuncs["curlnkfunc"] = fmtval.format
 
-        yield cfg["nav"]["reflist init"]
-        for name, link in catdat.items():
-            yield cfg["nav"]["ref init"]
-            if isinstance(link, Mapping):
-                yield from category_render(name, link, curlink)
-            elif link == curlink:
-                yield cfg["nav"]["ref cur"].format(name=name, link=link)
-            else:
-                yield cfg["nav"]["ref"].format(name=name, link=link)
-            yield cfg["nav"]["ref fini"]
-        yield cfg["nav"]["reflist fini"]
+    nav_render = nav.gen_navigation_renderer(**fmtfuncs)
 
     def do_header(page, outfile):
-        outfile.write("<header>")
+        outfile.write(cfg["header"]["start"])
         outfile.write(cfg["header"]["format"].format(*page.context))
-        outfile.write("</header>")
+        outfile.write(cfg["header"]["end"])
 
     def do_main(page, outfile):
         outfile.write("<main>")
         page.read_scroll()
-        outfile.write(page.build_main())
+        for tag in page.build_main():
+            outfile.write(tag)
         outfile.write("</main>")
 
     def do_nav(page, outfile):
-        outfile.write("<nav>")
-        for tag in category_render(None, catdict, page.linkpath):
+        outfile.write(cfg["nav"]["start"])
+        for tag in nav_render(catdict, None, page.linkpath):
             outfile.write(tag)
-        outfile.write("</nav>")
+        outfile.write(cfg["nav"]["end"])
 
     def do_footer(page, outfile):
-        outfile.write("<footer>")
+        outfile.write(cfg["footer"]["start"])
         outfile.write(cfg["footer"]["format"].format(*page.context))
-        outfile.write("</footer>")
+        outfile.write(cfg["footer"]["end"])
 
-    def page_builder(page, path):
-        outfile = open(path, "w")
+    def page_builder(page, outpath):
+        title = path.splitext(path.basename(page.filepath))[0].title()
+        if "title" in page.context:
+            title = page.context["title"]
+
+        outfile = open(outpath, "w")
         outfile.write("<head>")
         outfile.write("<meta charset=\"UTF-8\"/>")
-        outfile.write("<title>FIXME</title>")
+        outfile.write("<title>" + title + "</title>")
         # TODO: More head section stuff.
         outfile.write("</head>")
         outfile.write("<body>")
@@ -203,21 +96,25 @@ DEFAULT_CONFIG = {
         "order": "header main nav footer"
     },
     "nav": {
-        "nav init": "<nav id=\"leftnav\">",
-        "nav fini": "</nav>",
-        "cat": "<h1>{name}</h1>",
-        "indexed cat": "<a href=\"{link}\"><h1>{name}</h1></a>",
-        "reflist init": "<ul>",
-        "ref init": "<li>",
-        "ref fini": "</li>",
-        "ref": "<a href={link}>{name}</a>",
-        "ref cur": "<a class=\"curlnk\" href=\"{link}\">{name}</a>",
-        "reflist fini": "</ul>"
+        "start": "<nav id=\"navigation\">",
+        "end": "</nav>",
+        "category": nav.CATFMT,
+        "indexed category": nav.IDXCATFMT,
+        "entry list start": nav.ENTLSTINITFMT,
+        "entry list end": nav.ENTLSTFINIFMT,
+        "entry start": nav.ENTINITFMT,
+        "entry end": nav.ENTINITFMT,
+        "link": nav.LNKFMT,
+        "current link": nav.CURLNKFMT
     },
     "header": {
+        "start": "<header>",
+        "end": "</header>",
         "format": ""
     },
     "footer": {
+        "start": "<footer>",
+        "end": "</footer>",
         "format": ""
     }
 }

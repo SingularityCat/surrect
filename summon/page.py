@@ -48,4 +48,4 @@ class Page:
         rune.inscribe(ntree, self.context.copy())
         #tree.flatten(ntree)
         tree.collate(ntree)
-        return render.render(ntree)
+        yield from render.render(ntree)

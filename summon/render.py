@@ -35,7 +35,5 @@ def render_node(node, renderfuncs=HTML_RENDERFUNCS):
 
 
 def render(ntree, renderfuncs=HTML_RENDERFUNCS):
-    body = []
     for node in ntree.nodes:
-        body.append(render_node(node, renderfuncs))
-    return "".join(body)
+        yield render_node(node, renderfuncs)
