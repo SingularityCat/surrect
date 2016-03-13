@@ -20,7 +20,7 @@ arg_parser.add_argument("-n", "--noop",
 )
 
 arg_parser.add_argument("-m", "--mode",
-    dest="mod", action="store", default="build", choices=mode_choices,
+    dest="mode", action="store", default="build", choices=mode_choices,
     help="Set a build mode."
 )
 
@@ -108,7 +108,7 @@ def main():
         page_builder = generate_page_builder(cfg, category_tree)
 
         for outpath, pageobj in pages.items():
-            makedirs(path.dirname(pageobj), exist_ok=True)
+            makedirs(path.dirname(outpath), exist_ok=True)
             if path.exists(outpath):
                 if not path.isdir(outpath):
                     unlink(outpath)
