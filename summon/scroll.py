@@ -294,7 +294,7 @@ def catparse(tokens):
             if len(vn) > 0:
                 if len(vn) == 1:
                     # Move value along, set name to None.
-                    vn[1] = vn[0]
+                    vn.append(vn[0])
                     vn[0] = None
                 entries.append(CatEntry(k, *vn))
         elif k == "exclude" or k == "ignore":

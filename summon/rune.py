@@ -61,9 +61,9 @@ def inscribe(node, context):
         # As runes can produce runes, they need to be reeavaluated.
         # This allows for some nifty recursion.
         if nodes[i].kind is NODE_RUNE:
-            nodes[i:i+1] = evaluate(nodes[i], context)
+            nodes[i:i+1] = inscribe(nodes[i], context)
         else:
-            evaluate(nodes[i], context)
+            inscribe(nodes[i], context)
             i += 1
     if node.kind is NODE_RUNE:
         rid, rargs = node.value

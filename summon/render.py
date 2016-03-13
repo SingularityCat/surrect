@@ -4,18 +4,18 @@ from .tree import NODE_RAW, NODE_HEADING, NODE_TEXT
 
 
 def html_heading(node):
-    hlv, hdg = node.values
+    hlv, hdg = node.value
     hlv = max(1, min(6, hlv))
     hdg = html.escape(hdg)
     return "<h{n}>{title}</h{n}>".format(n=hlv, title=hdg)
 
 
 def html_paragraph(node):
-    return "<p>" + html.escape(node.para) + "</p>"
+    return "<p>" + html.escape(node.value) + "</p>"
 
 
-def html_unknown(*stuff):
-    return html.escape(str(stuff[0] if len(stuff) == 1 else stuff))
+def html_unknown(node):
+    return html.escape(str(node.value))
 
 
 HTML_RENDERFUNCS = {
