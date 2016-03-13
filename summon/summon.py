@@ -15,8 +15,8 @@ def generate_page_builder(cfg, catdict):
     section_order = [sec.strip() for sec in cfg["page"]["order"].split(" ")]
 
     # Convert config things to formatter functions
+    fmtfuncs = {}
     for fmtname, fmtval in cfg["nav"].items():
-        fmtfuncs = {}
         if fmtname == "category":
             fmtfuncs["catfunc"] = fmtval.format
         elif fmtname == "indexed category":

@@ -127,7 +127,7 @@ ENTLSTINITFMT, ENTLSTFINIFMT = "<ul>", "</ul>"
 ENTINITFMT, ENTFINIFMT = "<li>", "</li>"
 CATFMT = "<h1>{name}</h1>"
 IDXCATFMT = "<a href=\"{link}\"><h1>{name}</h1></a>"
-LNKFMT = "<a href={link}>{name}</a>"
+LNKFMT = "<a href=\"{link}\">{name}</a>"
 CURLNKFMT = "<a class=\"curlnk\" href=\"{link}\">{name}</a>"
 
 
