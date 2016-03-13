@@ -72,7 +72,7 @@ def category_scan(catcfg):
             catcfg["entries"].append(sce)
 
 
-def category_build(catpath, pageset, phy_root, log_root,
+def category_build(catpath, pageset, cat_root, phy_root, log_root,
                    pathfunc=scroll_html_pfunc):
     # Get the category configuration.
     catcfg = category_get_catcfg(catpath)
@@ -84,10 +84,10 @@ def category_build(catpath, pageset, phy_root, log_root,
 
     if catcfg["index"] is not None:
         inpath = path.normpath(path.join(catpath, catcfg["index"]))
-        outpath = pathfunc(inpath)
+        outpath = path.join(phy_root, path.relpath(pathfunc(inpath), cat_root))
         linkpath = path.join(log_root, path.relpath(outpath, phy_root))
         if path.exists(inpath):
-            idxpage = page.Page(inpath)
+            idxpage = page.Page(inpath, linkpath)
             pageset[outpath] = idxpage
             catdict[None] = linkpath
 
@@ -95,14 +95,14 @@ def category_build(catpath, pageset, phy_root, log_root,
         ename = ent.name
         # Category and scroll paths are all relative to thier directory.
         inpath = path.normpath(path.join(catpath, ent.path))
-        outpath = pathfunc(inpath)
+        outpath = path.join(phy_root, path.relpath(pathfunc(inpath), cat_root))
         linkpath = path.join(log_root, path.relpath(outpath, phy_root))
         if ent.path in exclude:
             continue
 
         if ent.kind == "subcat":
-            cn2, cd2 = category_build(inpath, pageset, phy_root, log_root,
-                                      pathfunc)
+            cn2, cd2 = category_build(inpath, pageset,
+                                      cat_root, phy_root, log_root, pathfunc)
             if ename is None:
                 ename = cn2
             catdict[ename] = cd2
