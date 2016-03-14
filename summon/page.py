@@ -46,6 +46,5 @@ class Page:
     def build_main(self):
         ntree = self.tree.deepcopy()
         rune.inscribe(ntree, self.context.copy())
-        #tree.flatten(ntree)
         tree.collate(ntree)
         yield from render.render(ntree)

@@ -1,13 +1,8 @@
-from functools import partial
-from collections import OrderedDict
-from collections.abc import Mapping
-from os import listdir, path
+"""summon: Ancillary stuff related to the summon tool (mainly config)."""
+
+from os import path
 from configparser import SafeConfigParser as ConfigParser
 
-from . import rune
-from . import scroll
-from . import tree
-from . import page
 from . import nav
 
 

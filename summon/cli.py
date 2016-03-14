@@ -1,6 +1,6 @@
 from logging import getLogger, ERROR, WARNING, INFO, DEBUG
 from os import listdir, makedirs, mkdir, path, unlink, walk
-from argparse import ArgumentError, ArgumentParser
+from argparse import ArgumentParser
 from shutil import rmtree
 
 from .rune import load as rune_load
@@ -90,7 +90,7 @@ def main():
         pages = {}
         _, category_tree = category_build(cat_root, pages,
                                           cat_root, phy_root, log_root)
-    
+
         if args.noop:
             log.info("Would have written:")
             for outpath in pages.keys():
@@ -98,7 +98,7 @@ def main():
             return 0
 
         if path.exists(phy_root):
-            if not args.force and len(path.listdir(phy_root)) != 0:
+            if not args.force and len(listdir(phy_root)) != 0:
                 log.error("Build directory \"%s\" exists and is not empty!"
                           % phy_root)
                 return 1
@@ -117,8 +117,9 @@ def main():
                 if path.exists(outpath):
                     log.critical("Path \"%s\" is stubborn." % outpath)
                     return 1
-
             page_builder(pageobj, outpath)
+
+    return 0
 
 
 if __name__ == "__main__":
