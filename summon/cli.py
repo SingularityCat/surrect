@@ -5,7 +5,8 @@ from shutil import rmtree
 
 from .rune import load as rune_load
 from .nav import category_build
-from .summon import generate_page_builder, make_default_config
+from .summon import get_outfunc, generate_page_builder, make_default_config
+from . import meta
 
 mode_choices = {"build", "gen"}
 
@@ -20,7 +21,7 @@ arg_parser.add_argument("-n", "--noop",
 )
 
 arg_parser.add_argument("-m", "--mode",
-    dest="mode", action="store", default="build", choices=mode_choices,
+    dest="mode", action="store", default=None, choices=mode_choices,
     help="Set a build mode."
 )
 
@@ -53,13 +54,27 @@ VERBOSITY_TO_LOGLEVEL = {
 }
 
 
+out = get_outfunc()
+
 def main():
-    log = getLogger()
+    log = getLogger(__name__)
     args = arg_parser.parse_args()
     log.setLevel(VERBOSITY_TO_LOGLEVEL[min(args.verbosity, 3)])
     cfg = make_default_config()
 
+    out("summon version %s" % meta.version)
+
+    # if mode is unspecified, we will use build,
+    # but only if the Summonfile exists.
+    if args.mode is None:
+        if path.exists(args.summonfile):
+            args.mode = "build"
+        else:
+            out("no mode specified and no Summonfile found.")
+            arg_parser.print_help()
+
     if args.mode == "gen":
+        out("Generating Summonfile at \"%s\"" % args.summonfile)
         if args.force or not path.exists(args.summonfile):
             if args.noop:
                 log.info("Would have written default Summonfile to \"%s\""
@@ -79,6 +94,7 @@ def main():
     rune_dir = cfg["summon"]["rune dir"]    # location of runes.
 
     # Load runes.
+    out("Loading runes...")
     for rpfx, rdirs, runes in walk(rune_dir):
         for rune in runes:
             runepath = path.join(rpfx, rune)
@@ -87,6 +103,7 @@ def main():
                 rune_load(runepath)
 
     if args.mode == "build":
+        out("Gathering category information...")
         pages = {}
         _, category_tree = category_build(cat_root, pages,
                                           cat_root, phy_root, log_root)
@@ -107,6 +124,7 @@ def main():
 
         page_builder = generate_page_builder(cfg, category_tree)
 
+        out("Parsing scrolls and producing output")
         for outpath, pageobj in pages.items():
             makedirs(path.dirname(outpath), exist_ok=True)
             if path.exists(outpath):

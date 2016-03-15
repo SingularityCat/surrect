@@ -1,9 +1,18 @@
-"""summon: Ancillary stuff related to the summon tool (mainly config)."""
+"""summon: Ancillary stuff related to summon."""
+
+import sys
 
 from os import path
 from configparser import SafeConfigParser as ConfigParser
+from functools import partial
 
 from . import nav
+
+def get_outfunc(colour=sys.stdout.isatty()):
+    if colour:
+        return partial(print, "\033[35m⛧ \033[0m")
+    else:
+        return partial(print, "⛧ ")
 
 
 def generate_page_builder(cfg, catdict):
