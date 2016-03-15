@@ -1,7 +1,7 @@
 import html
 
 from .rune import rune
-from .tree import Node, NODE_BLANK, NODE_HEADING, NODE_RAW
+from .tree import Node, NODE_BLANK, NODE_HEADING, NODE_RAW, NODE_TEXT
 from . import render
 
 
@@ -11,11 +11,11 @@ def link_rune(*args, nodes=None, context=None):
     url = "#"
     name = "here"
     if len(args) == 1:
-        url = arg[0]
-        name = html.escape(arg[0])
+        url = args[0]
+        name = html.escape(args[0])
     elif len(args) == 2:
-        url = arg[1]
-        name = html.escape(arg[0])
+        url = args[1]
+        name = html.escape(args[0])
     return [Node(NODE_RAW, '<a href="{0}">{1}</a>'.format(url, name))]
 
 

@@ -67,7 +67,7 @@ def inscribe(node, context):
             i += 1
     if node.kind is NODE_RUNE:
         rid, rargs = node.value
-        runefunc = rune.lookup(rid)
+        runefunc = lookup(rid)
         return runefunc(*rargs, nodes=nodes, context=context)
 
 

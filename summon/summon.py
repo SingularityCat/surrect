@@ -69,8 +69,10 @@ def generate_page_builder(cfg, catdict):
             title = page.context["title"]
 
         outfile = open(outpath, "w")
+        outfile.write("<!DOCTYPE html>\n")
         outfile.write("<head>")
         outfile.write("<meta charset=\"UTF-8\"/>")
+        outfile.write("<meta name=\"generator\" content=\"⛧ summon\"/>")
         outfile.write("<title>" + title + "</title>")
         # TODO: More head section stuff.
         outfile.write("</head>")
