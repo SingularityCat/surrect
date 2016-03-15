@@ -1,4 +1,10 @@
-.PHONY: test unit
+.PHONY: all build test unit
+
+all: test build
+
+build:
+	./setup.py build
+
 
 test: unit
 
