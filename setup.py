@@ -12,6 +12,7 @@ setup(
     author_email = "elliot@voidptr.uk",
     description = "An extendible static site generator.",
     url = "https://voidptr.uk/projects/summon.html",
-    packages=["summon"]
+    packages=["summon"],
+    scripts=["bin/summon"]
 )
 

@@ -1,10 +1,12 @@
-.PHONY: all build test unit
+.PHONY: all clean build test unit
 
 all: test build
 
-build:
-	./setup.py build
+clean:
+	rm -rf build dist
 
+build:
+	./setup.py bdist_wheel
 
 test: unit
 
