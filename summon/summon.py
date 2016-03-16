@@ -72,9 +72,8 @@ def generate_page_builder(cfg, catdict):
         outfile.write("<!DOCTYPE html>\n")
         outfile.write("<head>")
         outfile.write("<meta charset=\"UTF-8\"/>")
-        outfile.write("<meta name=\"generator\" content=\"⛧ summon\"/>")
         outfile.write("<title>" + title + "</title>")
-        # TODO: More head section stuff.
+        outfile.write(cfg["page"]["head"])
         outfile.write("</head>")
         outfile.write("<body>")
         for sec in section_order:
@@ -99,7 +98,8 @@ DEFAULT_CONFIG = {
         "build dir": "build"
     },
     "page": {
-        "order": "header main nav footer"
+        "order": "header main nav footer",
+        "head": "<meta name=\"generator\" content=\"⛧ summon\"/>"
     },
     "nav": {
         "start": "<nav id=\"navigation\">",

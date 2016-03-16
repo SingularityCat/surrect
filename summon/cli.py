@@ -72,18 +72,20 @@ def main():
         else:
             out("no mode specified and no Summonfile found.")
             arg_parser.print_help()
+            return 1
 
     if args.mode == "gen":
-        out("Generating Summonfile at \"%s\"" % args.summonfile)
         if args.force or not path.exists(args.summonfile):
             if args.noop:
-                log.info("Would have written default Summonfile to \"%s\""
+                out("Would have written default Summonfile to \"%s\""
                          % args.summonfile)
                 return 0
             with open(args.summonfile, "w") as sfile:
+                out("Generating Summonfile at \"%s\"" % args.summonfile)
                 cfg.write(sfile)
                 return 0
         else:
+            out("Not overwriting Summonfile at \"%s\"" % args.summonfile)
             return 1
 
     cfg.read(args.summonfile)
@@ -138,8 +140,3 @@ def main():
             page_builder(pageobj, outpath)
 
     return 0
-
-
-if __name__ == "__main__":
-    status = main()
-    exit(status)
