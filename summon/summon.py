@@ -109,7 +109,7 @@ DEFAULT_CONFIG = {
         "entry list start": nav.ENTLSTINITFMT,
         "entry list end": nav.ENTLSTFINIFMT,
         "entry start": nav.ENTINITFMT,
-        "entry end": nav.ENTINITFMT,
+        "entry end": nav.ENTFINIFMT,
         "link": nav.LNKFMT,
         "current link": nav.CURLNKFMT
     },

@@ -21,6 +21,7 @@ def link_rune(*args, nodes=None, context=None):
 
 @rune("list")
 def list_rune(*args, nodes=None, context=None):
+    """Creates an unordered list."""
     tags = []
     tags.append("<ul>")
     for node in nodes:
@@ -32,3 +33,22 @@ def list_rune(*args, nodes=None, context=None):
             tags.append("<li>{0}</li>".format(render.html_heading(node)))
     tags.append("</ul>")
     return [Node(NODE_RAW, "".join(tags))]
+
+
+@rune("section")
+def section_rune(*args, nodes=None, context=None):
+    """Wraps an indented section in <section> tags."""
+    return [Node(NODE_RAW, "<section>")] \
+           + nodes + \
+           [Node(NODE_RAW, "</section>")]
+
+@rune("big")
+def big_rune(*args, nodes=None, context=None):
+    stext = html.escape(" ".join(args))
+    return [Node(NODE_RAW, "<big>" + stext + "</big>")]
+
+
+@rune("small")
+def small_rune(*args, nodes=None, context=None):
+    stext = html.escape(" ".join(args))
+    return [Node(NODE_RAW, "<small>" + stext + "</small>")]

@@ -1,6 +1,6 @@
 import html
 
-from .tree import NODE_RAW, NODE_HEADING, NODE_TEXT
+from .tree import NODE_BLANK, NODE_RAW, NODE_HEADING, NODE_TEXT
 
 
 def html_heading(node):
@@ -22,6 +22,7 @@ HTML_RENDERFUNCS = {
     NODE_HEADING: html_heading,
     NODE_TEXT: html_paragraph,
     NODE_RAW: lambda node: node.value,
+    NODE_BLANK: lambda node: "\n",
     None: html_unknown
 }
 
