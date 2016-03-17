@@ -72,8 +72,8 @@ def category_scan(catcfg):
             catcfg["entries"].append(sce)
 
 
-def category_build(catpath, pageset, cat_root, phy_root, log_root,
-                   pathfunc=scroll_html_pfunc):
+def category_build(catpath, pageset, resourceset,
+                   cat_root, phy_root, log_root, pathfunc=scroll_html_pfunc):
     # Get the category configuration.
     catcfg = category_get_catcfg(catpath)
     category_scan(catcfg)
@@ -84,38 +84,42 @@ def category_build(catpath, pageset, cat_root, phy_root, log_root,
 
     if catcfg["index"] is not None:
         inpath = path.normpath(path.join(catpath, catcfg["index"]))
-        outpath = path.join(phy_root, path.relpath(pathfunc(inpath), cat_root))
+        outpath = path.join(phy_root, path.relpath(inpath, cat_root))
         linkpath = path.join(log_root, path.relpath(outpath, phy_root))
         if path.exists(inpath):
             idxpage = page.Page(inpath, linkpath)
-            pageset[outpath] = idxpage
-            catdict[None] = linkpath
+            pageset[pathfunc(outpath)] = idxpage
+            catdict[None] = pathfunc(linkpath)
 
     for ent in catcfg["entries"]:
         ename = ent.name
         # Category and scroll paths are all relative to thier directory.
         inpath = path.normpath(path.join(catpath, ent.path))
-        outpath = path.join(phy_root, path.relpath(pathfunc(inpath), cat_root))
+        outpath = path.join(phy_root, path.relpath(inpath, cat_root))
         linkpath = path.join(log_root, path.relpath(outpath, phy_root))
         if ent.path in exclude:
             continue
 
         if ent.kind == "subcat":
-            cn2, cd2 = category_build(inpath, pageset,
+            cn2, cd2 = category_build(inpath, pageset, resourceset,
                                       cat_root, phy_root, log_root, pathfunc)
             if ename is None:
                 ename = cn2
             catdict[ename] = cd2
-        elif ent.kind == "page" and path.exists(inpath):
+        elif ent.kind == "resource":
+            resourceset[outpath] = inpath
+        elif (ent.kind == "page" or ent.kind == "secret") \
+                and path.exists(inpath):
             p = page.Page(inpath, linkpath)
             p.read_metadata()
-            pageset[outpath] = p
+            pageset[pathfunc(outpath)] = p
             if ename is None:
                 if "name" in p.context:
                     ename = p.context["name"]
                 else:
                     ename = path.splitext(path.basename(ent.path))[0].title()
-            catdict[ename] = linkpath
+            if ent.kind != "secret":
+                catdict[ename] = pathfunc(linkpath)
         elif ent.kind == "link":
             if ename is None:
                 ename = ent.path

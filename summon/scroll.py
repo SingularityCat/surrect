@@ -288,7 +288,7 @@ def catparse(tokens):
             catdict[k] = interpret_str(v)
         elif k in {"scan"}:
             catdict[k] = interpret_bool(v)
-        elif k in {"subcat", "page", "link"}:
+        elif k in {"subcat", "page", "link", "resource", "secret"}:
             # These types are all "kind: [name] path"
             vn = interpret_strlist(v)[:2]
             if len(vn) > 0:

@@ -1,7 +1,7 @@
 from logging import getLogger, ERROR, WARNING, INFO, DEBUG
 from os import listdir, makedirs, mkdir, path, unlink, walk
 from argparse import ArgumentParser
-from shutil import rmtree
+from shutil import copyfile, rmtree
 
 from .rune import load as rune_load
 from .nav import category_build
@@ -107,7 +107,8 @@ def main():
     if args.mode == "build":
         out("Gathering category information...")
         pages = {}
-        _, category_tree = category_build(cat_root, pages,
+        resources = {}
+        _, category_tree = category_build(cat_root, pages, resources,
                                           cat_root, phy_root, log_root)
 
         if args.noop:
@@ -126,17 +127,22 @@ def main():
 
         page_builder = generate_page_builder(cfg, category_tree)
 
-        out("Parsing scrolls and producing output")
-        for outpath, pageobj in pages.items():
-            makedirs(path.dirname(outpath), exist_ok=True)
-            if path.exists(outpath):
-                if not path.isdir(outpath):
-                    unlink(outpath)
-                else:
-                    rmtree(outpath, ignore_errors=True)
+
+        def apply_pathdict(pdict, operation):
+            for outpath, obj in pdict.items():
+                makedirs(path.dirname(outpath), exist_ok=True)
                 if path.exists(outpath):
-                    log.critical("Path \"%s\" is stubborn." % outpath)
-                    return 1
-            page_builder(pageobj, outpath)
+                    if not path.isdir(outpath):
+                        unlink(outpath)
+                    else:
+                        rmtree(outpath, ignore_errors=True)
+                    if path.exists(outpath):
+                        log.critical("Path \"%s\" is stubborn." % outpath)
+                        return 1
+                operation(obj, outpath)
+        out("Parsing scrolls and producing output")
+        apply_pathdict(pages, page_builder)
+        out("Copying resources")
+        apply_pathdict(resources, copyfile)
 
     return 0
