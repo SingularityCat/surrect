@@ -3,12 +3,12 @@ from os import listdir, makedirs, mkdir, path, unlink, walk
 from argparse import ArgumentParser
 from shutil import copyfile, rmtree
 
-from .rune import load as rune_load
+from .rune import describe as rune_describe, load as rune_load
 from .nav import category_build
 from .summon import get_outfunc, generate_page_builder, make_default_config
 from . import meta
 
-mode_choices = {"build", "gen"}
+mode_choices = {"build", "gen", "runes"}
 
 arg_parser = ArgumentParser()
 arg_parser.add_argument("-f", "--file", "--summonfile",
@@ -22,12 +22,17 @@ arg_parser.add_argument("-n", "--noop",
 
 arg_parser.add_argument("-m", "--mode",
     dest="mode", action="store", default=None, choices=mode_choices,
-    help="Set a build mode."
+    help="Set a summon mode."
 )
 
 arg_parser.add_argument("-b", "--build",
     dest="mode", action="store_const", const="gen",
     help="Switch to build mode, this is the default."
+)
+
+arg_parser.add_argument("-r", "--runes",
+    dest="mode", action="store_const", const="runes",
+    help="List all runes, with descriptions."
 )
 
 arg_parser.add_argument("-g", "--gen",
@@ -104,6 +109,11 @@ def main():
                 log.info("Loading rune \"%s\"" % runepath)
                 rune_load(runepath)
 
+    if args.mode == "runes":
+        for rname, rdesc in rune_describe():
+            print(rname, ":", rdesc)
+        return 0
+
     if args.mode == "build":
         out("Gathering category information...")
         pages = {}
@@ -127,8 +137,7 @@ def main():
 
         page_builder = generate_page_builder(cfg, category_tree)
 
-
-        def apply_pathdict(pdict, operation):
+        def apply_pathdict(pdict, operation, msgfmt):
             for outpath, obj in pdict.items():
                 makedirs(path.dirname(outpath), exist_ok=True)
                 if path.exists(outpath):
@@ -140,9 +149,10 @@ def main():
                         log.critical("Path \"%s\" is stubborn." % outpath)
                         return 1
                 operation(obj, outpath)
-        out("Parsing scrolls and producing output")
-        apply_pathdict(pages, page_builder)
-        out("Copying resources")
-        apply_pathdict(resources, copyfile)
+                log.info(msgfmt % outpath)
+        out("Parsing scrolls and producing output...")
+        apply_pathdict(pages, page_builder, "Summoned %s")
+        out("Copying resources...")
+        apply_pathdict(resources, copyfile, "Copied resource %s")
 
     return 0

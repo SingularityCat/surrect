@@ -8,6 +8,7 @@ from functools import partial
 
 from . import nav
 
+
 def get_outfunc(colour=sys.stdout.isatty()):
     if colour:
         return partial(print, "\033[35m⛧ \033[0m")

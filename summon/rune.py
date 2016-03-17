@@ -28,6 +28,11 @@ def lookup(runeid):
     return runes[runeid]
 
 
+def describe():
+    """Return a list of rune names and docstrings."""
+    return [(name, func.__doc__) for name, func in runes.items()]
+
+
 def rune(runeid):
     """Rune decorator function."""
     return lambda runefunc: register(runeid, runefunc)

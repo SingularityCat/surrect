@@ -42,13 +42,9 @@ def section_rune(*args, nodes=None, context=None):
            + nodes + \
            [Node(NODE_RAW, "</section>")]
 
-@rune("big")
-def big_rune(*args, nodes=None, context=None):
-    stext = html.escape(" ".join(args))
-    return [Node(NODE_RAW, "<big>" + stext + "</big>")]
-
 
 @rune("small")
 def small_rune(*args, nodes=None, context=None):
+    """Wraps an indented section in <small> tags."""
     stext = html.escape(" ".join(args))
     return [Node(NODE_RAW, "<small>" + stext + "</small>")]
