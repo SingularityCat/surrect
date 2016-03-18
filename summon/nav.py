@@ -2,6 +2,8 @@ from collections import OrderedDict
 from collections.abc import Mapping
 from os import listdir, path
 
+import html
+
 from . import scroll
 from . import page
 
@@ -142,7 +144,8 @@ def gen_navigation_renderer(entlstinitfunc=ENTLSTINITFMT.format,
                             catfunc=CATFMT.format,
                             idxcatfunc=IDXCATFMT.format,
                             lnkfunc=LNKFMT.format,
-                            curlnkfunc=CURLNKFMT.format):
+                            curlnkfunc=CURLNKFMT.format,
+                            namefunc=html.escape):
     def navigation_render(catdat, catname=None, curlink=None):
         entrywrap = bool(catname)
         if entrywrap:
@@ -153,6 +156,9 @@ def gen_navigation_renderer(entlstinitfunc=ENTLSTINITFMT.format,
         if entrywrap:
             yield entlstinitfunc()
         for name, link in catdat.items():
+            if name is None:
+                continue
+            name = namefunc(name)
             if entrywrap:
                 yield entinitfunc()
             # If we encounter a category here, recurse into it.
