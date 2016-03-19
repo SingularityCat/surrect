@@ -89,9 +89,11 @@ def category_build(catpath, pageset, resourceset,
         outpath = path.join(phy_root, path.relpath(inpath, cat_root))
         linkpath = path.join(log_root, path.relpath(outpath, phy_root))
         if path.exists(inpath):
-            idxpage = page.Page(inpath, linkpath)
+            idxpage = page.Page(inpath, pathfunc(linkpath))
+            idxpage.read_metadata()
             pageset[pathfunc(outpath)] = idxpage
             catdict[None] = pathfunc(linkpath)
+            exclude.add(catcfg["index"])
 
     for ent in catcfg["entries"]:
         ename = ent.name
@@ -112,7 +114,7 @@ def category_build(catpath, pageset, resourceset,
             resourceset[outpath] = inpath
         elif (ent.kind == "page" or ent.kind == "secret") \
                 and path.exists(inpath):
-            p = page.Page(inpath, linkpath)
+            p = page.Page(inpath, pathfunc(linkpath))
             p.read_metadata()
             pageset[pathfunc(outpath)] = p
             if ename is None:
