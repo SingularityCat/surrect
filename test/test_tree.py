@@ -1,6 +1,6 @@
 import unittest
 from unittest import TestCase
-from summon.tree import *
+from surrect.tree import *
 
 
 class TestNodeMethods(TestCase):

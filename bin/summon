@@ -1,4 +1,0 @@
-#!/usr/bin/env python3
-from summon import core_runes
-from summon import cli
-exit(cli.main())

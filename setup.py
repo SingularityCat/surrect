@@ -2,17 +2,17 @@
 from os import path
 from setuptools import setup, find_packages
 
-with open(path.join("summon", "meta.py")) as fp:
+with open(path.join("surrect", "meta.py")) as fp:
     exec(fp.read(), globals(), locals())
 
 setup(
-    name = "summon",
+    name = "surrect",
     version = __version__,
     author = "Elliot Thomas",
     author_email = "elliot@voidptr.uk",
     description = "An extendible static site generator.",
-    url = "https://voidptr.uk/projects/summon.html",
-    packages=["summon"],
-    scripts=["bin/summon"]
+    url = "https://voidptr.uk/projects/surrect.html",
+    packages=["surrect"],
+    scripts=["bin/surrect"]
 )
 

@@ -1,4 +1,4 @@
-"""summon: Ancillary stuff related to summon."""
+"""summon: Ancillary stuff related to surrect."""
 
 import sys
 
@@ -100,7 +100,7 @@ DEFAULT_CONFIG = {
     },
     "page": {
         "order": "header main nav footer",
-        "head": "<meta name=\"generator\" content=\"⛧ summon\"/>"
+        "head": "<meta name=\"generator\" content=\"⛧ surrect\"/>"
     },
     "nav": {
         "start": "<nav id=\"navigation\">",

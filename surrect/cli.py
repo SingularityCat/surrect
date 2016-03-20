@@ -67,7 +67,7 @@ def main():
     log.setLevel(VERBOSITY_TO_LOGLEVEL[min(args.verbosity, 3)])
     cfg = make_default_config()
 
-    out("summon version %s" % meta.version)
+    out("surrect version %s" % meta.version)
 
     # if mode is unspecified, we will use build,
     # but only if the Summonfile exists.

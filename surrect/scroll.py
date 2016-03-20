@@ -1,7 +1,7 @@
 """
 scroll - module for understanding scrolls and catfiles.
 
-Scroll is a simple markup language for summon.
+Scroll is a simple markup language for surrect.
 
 Syntax:
 A scroll represents a heriachial n-tree of nodes with types and values.

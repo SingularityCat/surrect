@@ -1,7 +1,7 @@
 """
-tree: Contains scroll/summon intermediate representation tree code.
+tree: Contains scroll/surrect intermediate representation tree code.
 
-Node constants, class and functions used for
+Node constants, class and functions used for page assembly.
 """
 
 # Kinds of node.
