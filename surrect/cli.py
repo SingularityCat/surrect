@@ -13,41 +13,46 @@ mode_choices = {"build", "gen", "runes"}
 arg_parser = ArgumentParser()
 arg_parser.add_argument("-f", "--file", "--summonfile",
     dest="summonfile", action="store", default="Summonfile",
-    help="Read a file other then Summonfile for configuration."
+    help="read a file other then Summonfile for configuration"
 )
 arg_parser.add_argument("-n", "--noop",
     dest="noop", action="store_true", default=False,
-    help="Do a dry run - no files will be written."
+    help="do a dry run - no files will be written"
 )
 
 arg_parser.add_argument("-m", "--mode",
     dest="mode", action="store", default=None, choices=mode_choices,
-    help="Set a summon mode."
+    help="set a summon mode"
 )
 
 arg_parser.add_argument("-b", "--build",
     dest="mode", action="store_const", const="gen",
-    help="Switch to build mode, this is the default."
+    help="switch to build mode, this is the default"
 )
 
 arg_parser.add_argument("-r", "--runes",
     dest="mode", action="store_const", const="runes",
-    help="List all runes, with descriptions."
+    help="list all runes, with descriptions"
 )
 
 arg_parser.add_argument("-g", "--gen",
     dest="mode", action="store_const", const="gen",
-    help="Switch to generate mode, creates a default Summonfile."
+    help="switch to generate mode, creates a default Summonfile"
 )
 
-arg_parser.add_argument("-o", "--force",
+arg_parser.add_argument("-F", "--force",
     dest="force", action="store_true", default=False,
-    help="Overwrite files"
+    help="overwrite files, and otherwise generally care less about things"
 )
 
 arg_parser.add_argument("-v", "--verbose",
     dest="verbosity", action="count", default=0,
-    help="Verbosity, can be passed up to three times"
+    help="verbosity, can be passed up to three times"
+)
+
+arg_parser.add_argument("-V", "--version",
+    dest="ver", action="store_true", default=False,
+    help="print version and exit"
 )
 
 
@@ -66,6 +71,10 @@ def main():
     args = arg_parser.parse_args()
     log.setLevel(VERBOSITY_TO_LOGLEVEL[min(args.verbosity, 3)])
     cfg = make_default_config()
+
+    if args.ver:
+        print("surrect %s" % meta.version)
+        return 0
 
     out("surrect version %s" % meta.version)
 
