@@ -3,7 +3,7 @@
 all: test build
 
 clean:
-	rm -rf build dist
+	rm -rf build dist surrect.egg-info
 
 build:
 	./setup.py bdist_wheel

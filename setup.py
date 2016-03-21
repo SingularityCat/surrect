@@ -11,8 +11,17 @@ setup(
     author = "Elliot Thomas",
     author_email = "elliot@voidptr.uk",
     description = "An extendible static site generator.",
+    license = "MIT",
     url = "https://voidptr.uk/projects/surrect.html",
+    classifiers = [
+        "Environment :: Console",
+        "Topic :: Utilities",
+        "Programming Language :: Python :: 3",
+        "Natural Language :: English",
+        "Development Status :: 3 - Alpha",
+        "License :: OSI Approved :: MIT License"
+    ],
     packages=["surrect"],
-    scripts=["bin/surrect"]
+    scripts=["bin/surrect"],
 )
 
