@@ -31,9 +31,10 @@ class Page:
             for token, value in lexer:
                 if token is not scroll.TOKEN_COMMENT:
                     break
-                elif value.startswith("###"):
-                    key, _, value = value[3:].strip().partition("=")
-                    self.context[key] = value
+                # One of the hashes is removed by the lexer.
+                elif value.startswith("##"):
+                    key, _, value = value[2:].partition(":")
+                    self.context[key.strip()] = value.strip()
             lexer.close()
 
     def read_scroll(self):
