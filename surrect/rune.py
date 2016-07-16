@@ -12,30 +12,35 @@ All runes have a specific signature:
 
 from .tree import Node, NODE_RUNE, NODE_TYPES
 
-runes = {}
+runes = {None: {}}
 
 
-def register(runeid, runefunc):
+def register(runeid, runetype, runefunc):
     """Registers a rune function. Returns the rune function."""
-    runes[runeid] = runefunc
+    if runetype not in runes:
+        runes[runetype] = {}
+    runes[runetype][runeid] = runefunc
     return runefunc
 
 
-def lookup(runeid):
+def lookup(runeid, runetype):
     """Find a rune function."""
-    if runeid not in runes:
+    if runetype not in runes:
+        runetype = None
+    if runeid not in runes[runetype]:
         runeid = "noop"
-    return runes[runeid]
+    return runes[runetype][runeid]
 
 
 def describe():
     """Return a list of rune names and docstrings."""
-    return [(name, func.__doc__) for name, func in runes.items()]
+    return [("%s:%s" % (rtype, rname), func.__doc__) for rtype, typedrunes in runes.items()
+            for rname, func in typedrunes.items()]
 
 
-def rune(runeid):
+def rune(runeid, runetype=None):
     """Rune decorator function."""
-    return lambda runefunc: register(runeid, runefunc)
+    return lambda runefunc: register(runeid, runetype, runefunc)
 
 
 def load(fpath):
@@ -50,7 +55,7 @@ def load(fpath):
         exec(code, runescope)
 
 
-def inscribe(node, context):
+def inscribe(node, rtype, context):
     """
     Inscribe all runes in a tree.
     This function works by rewrite sections of the tree
@@ -72,11 +77,11 @@ def inscribe(node, context):
             i += 1
     if node.kind is NODE_RUNE:
         rid, rargs = node.value
-        runefunc = lookup(rid)
+        runefunc = lookup(rid, rtype)
         return runefunc(*rargs, nodes=nodes, context=context)
 
 
-@rune("noop")
+@rune("noop", None)
 def noop_rune(*args, nodes=None, context=None):
-    """Rune that returns an empty list."""
-    return []
+    """Rune that returns it's argument nodes."""
+    return nodes

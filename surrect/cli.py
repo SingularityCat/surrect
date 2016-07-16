@@ -15,6 +15,12 @@ arg_parser.add_argument("-f", "--file", "--summonfile",
     dest="summonfile", action="store", default="Summonfile",
     help="read a file other then Summonfile for configuration"
 )
+
+arg_parser.add_argument("-t", "--format",
+    dest="format", action="store", default="html",
+    help="output format."
+)
+
 arg_parser.add_argument("-n", "--noop",
     dest="noop", action="store_true", default=False,
     help="do a dry run - no files will be written"

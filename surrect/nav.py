@@ -139,14 +139,14 @@ LNKFMT = "<a href=\"{link}\">{name}</a>"
 CURLNKFMT = "<a class=\"curlnk\" href=\"{link}\">{name}</a>"
 
 
-def gen_navigation_renderer(entlstinitfunc=ENTLSTINITFMT.format,
-                            entlstfinifunc=ENTLSTFINIFMT.format,
-                            entinitfunc=ENTINITFMT.format,
-                            entfinifunc=ENTFINIFMT.format,
-                            catfunc=CATFMT.format,
-                            idxcatfunc=IDXCATFMT.format,
-                            lnkfunc=LNKFMT.format,
-                            curlnkfunc=CURLNKFMT.format,
+def gen_navigation_renderer(entlstinitfunc,
+                            entlstfinifunc,
+                            entinitfunc,
+                            entfinifunc,
+                            catfunc,
+                            idxcatfunc,
+                            lnkfunc,
+                            curlnkfunc,
                             namefunc=html.escape):
     def navigation_render(catdat, catname=None, curlink=None):
         entrywrap = bool(catname)

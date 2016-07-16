@@ -11,7 +11,8 @@ from . import render
 class Page:
     """Page class"""
 
-    def __init__(self, filepath, linkpath):
+    def __init__(self, fmt, filepath, linkpath):
+        self.fmt = fmt
         self.filepath = filepath
         self.linkpath = linkpath
         self.context = {}
