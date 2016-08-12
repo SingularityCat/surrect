@@ -5,7 +5,7 @@ from shutil import copyfile, rmtree
 
 from .rune import describe as rune_describe, load as rune_load
 from .nav import category_build
-from .summon import get_outfunc, generate_page_builder, make_default_config
+from .summon import get_outfunc_msg, generate_page_builder, make_default_config
 from . import meta
 
 mode_choices = {"build", "gen", "runes"}
@@ -70,7 +70,7 @@ VERBOSITY_TO_LOGLEVEL = {
 }
 
 
-out = get_outfunc()
+out = get_outfunc_msg()
 
 def main():
     log = getLogger(__name__)

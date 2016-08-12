@@ -1,25 +1,25 @@
-import unittest
 from unittest import TestCase
-from surrect.tree import *
+
+from surrect.scroll.tree import *
 
 
 class TestNodeMethods(TestCase):
     def test_init(self):
         v = object()
-        n = Node(NODE_ROOT, v)
+        n = ScrollNode(NODE_ROOT, v)
         self.assertEqual(n.kind, NODE_ROOT)
         self.assertIs(n.value, v)
-        self.assertRaises(NodeError, Node, "random", "foo")
+        self.assertRaises(ScrollNodeError, ScrollNode, "random", "foo")
 
     def test_eq(self):
-        a = Node(NODE_TEXT, "hello!")
-        b = Node(NODE_TEXT, "hello!")
+        a = ScrollNode(NODE_TEXT, "hello!")
+        b = ScrollNode(NODE_TEXT, "hello!")
         self.assertTrue(a == b)
 
     def test_copy(self):
-        a = Node(NODE_TEXT, "hello!")
-        a.nodes.append(Node(NODE_TEXT, "I'm a node!"))
-        a.nodes.append(Node(NODE_BLANK, None))
+        a = ScrollNode(NODE_TEXT, "hello!")
+        a.nodes.append(ScrollNode(NODE_TEXT, "I'm a node!"))
+        a.nodes.append(ScrollNode(NODE_BLANK, None))
         b = a.copy()
         self.assertIsNot(a, b)
         self.assertIs(a.kind, b.kind)
@@ -30,9 +30,9 @@ class TestNodeMethods(TestCase):
             self.assertIs(a.nodes[n], b.nodes[n])
 
     def test_deepcopy(self):
-        a = Node(NODE_TEXT, "hello!")
-        a.nodes.append(Node(NODE_TEXT, "I'm a node!"))
-        a.nodes.append(Node(NODE_BLANK, None))
+        a = ScrollNode(NODE_TEXT, "hello!")
+        a.nodes.append(ScrollNode(NODE_TEXT, "I'm a node!"))
+        a.nodes.append(ScrollNode(NODE_BLANK, None))
         b = a.deepcopy()
         self.assertIsNot(a, b)
         self.assertIs(a.kind, b.kind)
@@ -46,9 +46,9 @@ class TestNodeMethods(TestCase):
 
 class TestCollation(TestCase):
     def test_collect_nodes(self):
-        nds = [Node(NODE_TEXT, str(i)) for i in range(0, 3)] + \
-              [Node(NODE_BLANK, None)] + \
-              [Node(NODE_TEXT, str(i)) for i in range(3, 6)]
+        nds = [ScrollNode(NODE_TEXT, str(i)) for i in range(0, 3)] + \
+              [ScrollNode(NODE_BLANK, None)] + \
+              [ScrollNode(NODE_TEXT, str(i)) for i in range(3, 6)]
         cnds = []
         gen = iter(nds)
         tail = collect_nodes(NODE_TEXT, cnds, gen)
@@ -66,15 +66,15 @@ class TestCollation(TestCase):
                 return string
             return " ", coll
 
-        nds = [Node(NODE_TEXT, str(i)) for i in range(0, 3)] + \
-              [Node(NODE_BLANK, None)] + \
-              [Node(NODE_TEXT, str(i)) for i in range(3, 6)]
+        nds = [ScrollNode(NODE_TEXT, str(i)) for i in range(0, 3)] + \
+              [ScrollNode(NODE_BLANK, None)] + \
+              [ScrollNode(NODE_TEXT, str(i)) for i in range(3, 6)]
 
         collators = {
             NODE_TEXT: test_collator(nds[0:3] + nds[4:7])
         }
 
-        root = Node(NODE_ROOT, None)
+        root = ScrollNode(NODE_ROOT, None)
         root.nodes[:] = nds
         collate(root, collators=collators)
         self.assertEqual(len(root.nodes), 3)

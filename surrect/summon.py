@@ -1,17 +1,20 @@
 """summon: Ancillary stuff related to surrect."""
 
 import sys
+import codecs
 
 from os import path
-from configparser import SafeConfigParser as ConfigParser
+from configparser import ConfigParser
 from functools import partial
 
 from . import nav
 
 
-def get_outfunc(colour=sys.stdout.isatty()):
+def get_outfunc_msg(colour=sys.stdout.isatty()):
+    u8w = codecs.getwriter("utf8")
+
     if colour:
-        return partial(print, "\033[35m⛧ \033[0m")
+        return partial(print, "\033[35m⛧ \033[0m", flush=True, file=codecs.getwriter("utf8")(sys.stderr.buffer, "replace"))
     else:
         return partial(print, "⛧ ")
 

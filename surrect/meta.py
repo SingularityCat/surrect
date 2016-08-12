@@ -1,4 +1,4 @@
-"""Summon metadata (version, stuff like that)"""
+"""Surrect metadata (version, stuff like that)"""
 
 __version__ = "0.0.1"
 

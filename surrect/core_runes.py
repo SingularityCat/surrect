@@ -1,8 +1,7 @@
 import html
 
+from .scroll.tree import ScrollNode, NODE_RAW, NODE_TEXT
 from .rune import rune
-from .tree import Node, NODE_BLANK, NODE_HEADING, NODE_RAW, NODE_TEXT
-from . import render
 
 
 @rune("link")
@@ -13,7 +12,7 @@ def link_rune(*args, nodes=None, context=None):
         text = "[{0}]".format(args[0])
     elif len(args) == 2:
         text = "{0} [{1}]".format(args[0], args[1])
-    return [Node(NODE_RAW, text)]
+    return [ScrollNode(NODE_RAW, text)]
 
 @rune("link", "html")
 def link_rune_html(*args, nodes=None, context=None):
@@ -26,7 +25,7 @@ def link_rune_html(*args, nodes=None, context=None):
     elif len(args) == 2:
         url = args[1]
         name = html.escape(args[0])
-    return [Node(NODE_RAW, '<a href="{0}">{1}</a>'.format(url, name))]
+    return [ScrollNode(NODE_RAW, '<a href="{0}">{1}</a>'.format(url, name))]
 
 
 @rune("list")
@@ -36,7 +35,7 @@ def list_rune(*args, nodes=None, context=None):
     for node in nodes:
         if node.kind in {NODE_TEXT, NODE_RAW}:
             lines.append(" - " + node.value)
-    return [Node(NODE_RAW, lines.join("\n"))]
+    return [ScrollNode(NODE_RAW, lines.join("\n"))]
 
 
 @rune("list", "html")
@@ -50,25 +49,25 @@ def list_rune_html(*args, nodes=None, context=None):
         elif node.kind is NODE_RAW:
             tags.append("<li>{0}</li>".format(node.value))
     tags.append("</ul>")
-    return [Node(NODE_RAW, "".join(tags))]
+    return [ScrollNode(NODE_RAW, "".join(tags))]
 
 
 @rune("section")
 def section_rune(*args, nodes=None, context=None):
     """Adds a newline after some nodes."""
-    return nodes + [Node(NODE_RAW, "\n")]
+    return nodes + [ScrollNode(NODE_RAW, "\n")]
 
 
 @rune("section", "html")
 def section_rune(*args, nodes=None, context=None):
     """Wraps an indented section in <section> tags."""
-    return [Node(NODE_RAW, "<section>")] \
+    return [ScrollNode(NODE_RAW, "<section>")] \
            + nodes + \
-           [Node(NODE_RAW, "</section>")]
+           [ScrollNode(NODE_RAW, "</section>")]
 
 
 @rune("small", "html")
 def small_rune(*args, nodes=None, context=None):
     """Wraps an indented section in <small> tags."""
     stext = html.escape(" ".join(args))
-    return [Node(NODE_RAW, "<small>" + stext + "</small>")]
+    return [ScrollNode(NODE_RAW, "<small>" + stext + "</small>")]

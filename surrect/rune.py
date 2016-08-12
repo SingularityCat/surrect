@@ -10,7 +10,7 @@ All runes have a specific signature:
     function(args*, nodes=[list of nodes], context={dict of context})
 """
 
-from .tree import Node, NODE_RUNE, NODE_TYPES
+from .scroll.tree import ScrollNode, NODE_RUNE, NODE_TYPES
 
 runes = {None: {}}
 
@@ -48,7 +48,7 @@ def load(fpath):
     with open(fpath, "r") as src:
         runescope = {
             "rune": rune,
-            "Node": Node
+            "ScrollNode": ScrollNode
         }
         runescope.update(NODE_TYPES)
         code = compile(src.read(), fpath, "exec",)

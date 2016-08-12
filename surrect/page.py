@@ -2,10 +2,10 @@
 page - Contains classes and functions for handling pages.
 """
 
+from .scroll import tree
+from . import render
 from . import rune
 from . import scroll
-from . import tree
-from . import render
 
 
 class Page:
@@ -30,7 +30,7 @@ class Page:
         with open(self.filepath, "r") as source:
             lexer = scroll.lex(source)
             for token, value in lexer:
-                if token is not scroll.TOKEN_COMMENT:
+                if token is not scroll.lexer.TOKEN_COMMENT:
                     break
                 # One of the hashes is removed by the lexer.
                 elif value.startswith("##"):

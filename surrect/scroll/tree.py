@@ -1,7 +1,7 @@
 """
-tree: Contains scroll/surrect intermediate representation tree code.
+scroll.tree: Contains scroll AST code.
 
-Node constants, class and functions used for page assembly.
+Node constants, class and functions used for scroll syntax representation.
 """
 
 # Kinds of node.
@@ -24,15 +24,15 @@ NODE_TYPES = {
 }
 
 
-class NodeError(Exception):
+class ScrollNodeError(Exception):
     """Error raised when there's a problem with a tree node."""
 
 
-class Node:
-    """A node in a tree."""
+class ScrollNode:
+    """A scroll node."""
     def __init__(self, kind, value):
         if kind not in NODE_TYPES.values():
-            raise NodeError("Not a valid node type.")
+            raise ScrollNodeError("Not a valid node type.")
         self.kind = kind
         self.value = value
         self.nodes = []
@@ -54,24 +54,19 @@ class Node:
         eq = self.kind == n.kind and self.value == n.value
         return eq and self.nodes == n.nodes
 
+    def print(self, depth=0):
+        """Print this node and all descendants."""
+        idnt = depth - 1
+        bnch = 0 if idnt < 0 else 1
+        kind, value = self.kind, self.value
+        nodes = self.nodes
 
-def print_tree(nodeish, depth=0):
-    """Print a tree of nodes."""
-    idnt = depth - 1
-    bnch = 0 if idnt < 0 else 1
-    if isinstance(nodeish, Node):
-        kind, value = nodeish.kind, nodeish.value
-        nodes = nodeish.nodes
-    else:
-        kind, value = "(not a node)", None
-        nodes = nodeish
-
-    print(" |  " * idnt + " |->" * bnch, kind, value)
-    for node in nodes:
-        print_tree(node, depth + 1)
+        print(" |  " * idnt + " |->" * bnch, kind, value)
+        for node in nodes:
+            self.print(depth + 1)
 
 
-# ### Node collation functions ###
+# ### ScrollNode collation functions ###
 # Code related to collecting and combining nodes.
 
 
@@ -102,7 +97,7 @@ DEFAULT_COLLATORS = {
 
 def collate(root, collators=DEFAULT_COLLATORS):
     """
-    Node collator. Modifies tree in place.
+    ScrollNode collator. Modifies tree in place.
     Takes two arguments, a root node, and a dict of collation functions.
     Each key in this dict is a node kind,
     and each value is a string, function pair.

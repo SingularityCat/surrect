@@ -1,6 +1,6 @@
 import html
 
-from .tree import NODE_BLANK, NODE_RAW, NODE_HEADING, NODE_TEXT
+from .scroll.tree import NODE_BLANK, NODE_RAW, NODE_HEADING, NODE_TEXT
 
 
 def html_heading(node):
