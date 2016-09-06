@@ -21,7 +21,7 @@ setup(
         "Development Status :: 3 - Alpha",
         "License :: OSI Approved :: MIT License"
     ],
-    packages=["surrect"],
+    packages=["surrect", "surrect.scroll"],
     scripts=["bin/surrect"],
 )
 
