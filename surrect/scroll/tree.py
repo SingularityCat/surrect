@@ -63,7 +63,7 @@ class ScrollNode:
 
         print(" |  " * idnt + " |->" * bnch, kind, value)
         for node in nodes:
-            self.print(depth + 1)
+            node.print(depth + 1)
 
 
 # ### ScrollNode collation functions ###
