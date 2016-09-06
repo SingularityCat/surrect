@@ -171,3 +171,6 @@ def main():
         apply_pathdict(resources, copyfile, "Copied resource %s")
 
     return 0
+
+if __name__ == "__main__":
+    exit(main())
