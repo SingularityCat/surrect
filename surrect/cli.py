@@ -11,9 +11,9 @@ from . import meta
 mode_choices = {"build", "gen", "runes"}
 
 arg_parser = ArgumentParser()
-arg_parser.add_argument("-f", "--file", "--summonfile",
+arg_parser.add_argument("-f", "--summonfile",
     dest="summonfile", action="store", default="Summonfile",
-    help="read a file other then Summonfile for configuration"
+    help="read a file other then Summonfile for build configuration"
 )
 
 arg_parser.add_argument("-t", "--format",

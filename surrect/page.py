@@ -2,8 +2,8 @@
 page - Contains classes and functions for handling pages.
 """
 
-from .scroll import tree
-from . import render
+from copy import deepcopy
+
 from . import rune
 from . import scroll
 
@@ -11,23 +11,15 @@ from . import scroll
 class Page:
     """Page class"""
 
-    def __init__(self, fmt, filepath, linkpath):
-        self.fmt = fmt
+    def __init__(self, fmt, filepath, linkfmt, ctx):
         self.filepath = filepath
-        self.linkpath = linkpath
-        self.context = {}
-        self.tree = None
-
-    def read_metadata(self):
-        """
-        Reads metadata from a scroll file.
-        Metadata exists as special scroll comments,
-        consisting of three hashes at the start of a file.
-        Metadata comments are key-value pairs.
-        Regular comments are ignored.
-        Reading stops after the first non-comment token.
-        """
-        with open(self.filepath, "r") as source:
+        self.context = deepcopy(ctx)
+        # Read metadata from a scroll file.
+        # Metadata exists as series of special comments, each starting with
+        # three hashes, optionally interleaved with regular comments.
+        # Metadata comments are key-value pairs.
+        # Reading stops after the first non-comment token.
+        with open(filepath, "r") as source:
             lexer = scroll.lex(source)
             for token, value in lexer:
                 if token is not scroll.lexer.TOKEN_COMMENT:
@@ -37,16 +29,15 @@ class Page:
                     key, _, value = value[2:].partition(":")
                     self.context[key.strip()] = value.strip()
             lexer.close()
+        self.linkpath = linkfmt.vformat([], self.context)
+        self.tree = None
 
     def read_scroll(self):
-        """
-        Reads and builds an entire scroll tree from a scroll file.
-        """
+        """Reads and builds an entire scroll tree from a scroll file."""
         with open(self.filepath, "r") as source:
             self.tree = scroll.parse(scroll.lex(source))
 
-    def build_main(self):
-        ntree = self.tree.deepcopy()
-        rune.inscribe(ntree, self.context.copy())
-        tree.collate(ntree)
-        yield from render.render(ntree)
+    def build_main(self, fmt):
+        rtree = rune.assemble(self.tree, fmt)
+        procnodes = rune.inscribe(rtree, fmt, deepcopy(self.context))
+        yield from (rnode.data for rnode in procnodes)

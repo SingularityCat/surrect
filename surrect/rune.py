@@ -7,8 +7,12 @@ A rune is a python function that returns a
 list or tuple of 0 or more nodes.
 
 All runes have a specific signature:
-    function(args*, nodes=[list of nodes], context={dict of context})
+    function(args*, nodes=[list of nodes], attrs={set of attributes}, context={dict of context})
+If a rune function does not accept all of the required keyword args, it is wrapped.
 """
+
+import inspect
+
 from collections import namedtuple
 from enum import Enum
 from typing import List, Set, Sequence
@@ -24,8 +28,31 @@ def noop_rune(*args, nodes=None, context=None):
 runes = {None: {"noop": noop_rune}}
 
 
+def argfilter(func, forbidden):
+    """Remove a set of keyword arguments."""
+    def wrapper(*args, **kwargs):
+        for k in forbidden:
+            if k in kwargs:
+                del kwargs[k]
+        return func(*args, *kwargs)
+    return wrapper
+
+
 def register(runeid, runetype, runefunc):
     """Registers a rune function. Returns the rune function."""
+    sig = inspect.signature(runefunc)
+    kset = {"nodes", "attrs", "context"}
+    pset = set()
+    for n in sig.parameters.values():
+        if n.kind is inspect.Parameter.VAR_KEYWORD:
+            break
+        elif n.kind is inspect.Parameter.POSITIONAL_OR_KEYWORD or n.kind is inspect.Parameter.KEYWORD_ONLY:
+            pset.add(n.name)
+            if pset >= kset:
+                break
+    else:
+        runefunc = argfilter(runefunc, kset - pset)
+
     if runetype not in runes:
         runes[runetype] = {}
     runes[runetype][runeid] = runefunc
@@ -139,4 +166,4 @@ def inscribe(node: RuneNode, rtype: str, context: dict) -> List[RuneNode]:
     if node.kind is RuneType.RUNE:
         rid, rargs = node.data
         runefunc = lookup(rid, rtype)
-        return runefunc(*rargs, nodes=nodes, context=context)
+        return runefunc(*rargs, nodes=nodes, attrs=node.attributes, context=context)

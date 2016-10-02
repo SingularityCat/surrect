@@ -8,10 +8,6 @@ from . import scroll
 from . import page
 
 
-def scroll_html_pfunc(pth):
-    return path.splitext(pth)[0] + ".html"
-
-
 def category_get_catcfg(catpath):
     """
     Determines a category configuration.
@@ -33,6 +29,8 @@ def category_get_catcfg(catpath):
         cfpath = path.join(catpath, "cat")
     else:
         catpath = path.dirname(catpath)
+        if catpath == "":
+            catpath = "."
 
     catcfg = {
         "name": default_name,
@@ -55,9 +53,6 @@ def category_scan(catcfg):
     Adds all files in a directory to the end of the
     entries list in a category configuration.
     """
-    # Early exit if scanning is disabled in this configuration.
-    if not catcfg["scan"]:
-        return
     # Construct set of accounted for paths.
     accounted = {ent.path for ent in catcfg["entries"]} | catcfg["exclude"]
     catpath = catcfg["catpath"]
@@ -75,10 +70,11 @@ def category_scan(catcfg):
 
 
 def category_build(catpath, pageset, resourceset,
-                   cat_root, phy_root, log_root, pathfunc=scroll_html_pfunc):
+                   cat_root, phy_root, log_root, pathfmt):
     # Get the category configuration.
     catcfg = category_get_catcfg(catpath)
-    category_scan(catcfg)
+    if catcfg["scan"]:
+        category_scan(catcfg)
     catpath = catcfg["catpath"]
     exclude = catcfg["exclude"]
     # The category dict.
@@ -88,8 +84,9 @@ def category_build(catpath, pageset, resourceset,
         inpath = path.normpath(path.join(catpath, catcfg["index"]))
         outpath = path.join(phy_root, path.relpath(inpath, cat_root))
         linkpath = path.join(log_root, path.relpath(outpath, phy_root))
+
         if path.exists(inpath):
-            idxpage = page.Page(inpath, pathfunc(linkpath))
+            idxpage = page.Page(inpath, pathfmt)
             idxpage.read_metadata()
             pageset[pathfunc(outpath)] = idxpage
             catdict[None] = pathfunc(linkpath)
