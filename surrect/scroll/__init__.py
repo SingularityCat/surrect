@@ -14,6 +14,7 @@ After processing any indentation, the first character of a line
 determines what kind of node it forms.
  - "="  = Heading marker.
  - ":"  = Rune specifier.
+ - "@"  = Neru specifier.
  - "#"  = Comment.
  - "!"  = Raw line.
  - "\n" or just whitespace = Separator
@@ -21,10 +22,11 @@ determines what kind of node it forms.
 
 BNF:
 <scroll> ::= <node> | <scroll> "\\n" <node>
-<node> ::= <rune> | <raw> | <heading> | <text> | <comment>
+<node> ::= <rune> | <neru> | <raw> | <heading> | <text> | <comment>
 <indent> ::= "" | "    " | <indent> "    "
 
 <rune> ::= <indent> ":" <identifier> "(" <argstr> ")"
+<neru> ::= <indent> "@" <identifier> "(" <argstr> ")"
 <raw> ::= <indent> "!" <string>
 <heading> ::= <indent> "=" <string>
 <text> ::= <indent> <string>
@@ -48,12 +50,9 @@ Catfiles have the from:
 
 """
 
-from string import whitespace
 from collections import namedtuple
-
-from .lexer import lex
-from .parser import parse
-
+from . import lexer, parser
+from .util import interpret_bool, interpret_str, interpret_strlist
 
 # Functions for lexing/parsing 'catfiles'.
 

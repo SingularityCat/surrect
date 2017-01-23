@@ -3,16 +3,24 @@ scroll.lexer:
 """
 
 from string import whitespace
-from .utils import charcount, gensplit, interpret_strlist
+from .util import charcount, gensplit, interpret_strlist
 
 # Token symbols
 TOKEN_INDENT = "<indent>"
 TOKEN_RUNE = "<rune>"
+TOKEN_NERU = "<neru>"
 TOKEN_RAW = "<raw>"
 TOKEN_HEADING = "<heading>"
 TOKEN_TEXT = "<text>"
 TOKEN_BLANK = "<blank>"
 TOKEN_COMMENT = "<comment>"
+
+
+def extract_brackets(line):
+    """Splits a scroll 'call line' into identifier + suffix."""
+    ident, _, enil = line[1:].partition("(")
+    thing, _, _, = enil.rpartition(")")
+    return ident, thing
 
 
 def lex(source):
@@ -38,12 +46,17 @@ def lex(source):
             level = charcount(line, "=")
             yield TOKEN_HEADING, (level, line.strip("=" + whitespace))
 
-        elif line.startswith(":"):
+        elif line.startswith(":") or line.startswith("@"):
             # Runes have the form:
             # ":" || <rune id> || "(" || args || ")"
-            runeid, _, enil = line[1:].partition("(")
-            args, _, _, = enil.rpartition(")")
+            runeid, args = extract_brackets(line)
             yield TOKEN_RUNE, (runeid, interpret_strlist(args))
+
+        elif line.startswith("@"):
+            # Nerus have the form:
+            # "@" || <rune id> || "(" || args || ")"
+            neruid, args = extract_brackets(line)
+            yield TOKEN_RUNE, (neruid, interpret_strlist(args))
 
         elif line.startswith("#"):
             # This is a comment.

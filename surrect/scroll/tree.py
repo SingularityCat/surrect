@@ -7,6 +7,7 @@ Node constants, class and functions used for scroll syntax representation.
 # Kinds of node.
 NODE_ROOT = "root"
 NODE_RUNE = "rune"
+NODE_NERU = "neru"
 NODE_RAW = "raw"
 NODE_HEADING = "heading"
 NODE_TEXT = "text"
@@ -17,6 +18,7 @@ NODE_BLANK = "blank"
 NODE_TYPES = {
     "NODE_ROOT": NODE_ROOT,
     "NODE_RUNE": NODE_RUNE,
+    "NODE_NERU": NODE_NERU,
     "NODE_RAW": NODE_RAW,
     "NODE_HEADING": NODE_HEADING,
     "NODE_TEXT": NODE_TEXT,
