@@ -1,6 +1,6 @@
 
 """
-rune - module containing the rune decorator,
+rune - module containing the rune decorator, some registries
 and some built in runes.
 
 A rune is a python function that returns a
@@ -9,6 +9,8 @@ list or tuple of 0 or more nodes.
 All runes have a specific signature:
     function(args*, nodes=[list of nodes], attrs={set of attributes}, context={dict of context})
 If a rune function does not accept all of the required keyword args, it is wrapped.
+
+This module also defines the 'escape' decorator + registry.
 """
 
 import inspect
@@ -17,9 +19,39 @@ from collections import namedtuple
 from enum import Enum
 from typing import List, Set, Sequence
 
-from .scroll.tree import ScrollNode, NODE_BLANK, NODE_RAW, NODE_ROOT, NODE_RUNE, NODE_HEADING, NODE_TEXT
+from .scroll.tree import ScrollNode, NODE_BLANK, NODE_RAW, NODE_ROOT, NODE_RUNE, NODE_NERU, NODE_HEADING, NODE_TEXT
 
 
+### Escape function handling. ###
+def noop_escape(string, context=None):
+    """Escape function that does no transformation on the string."""
+    return string
+
+
+escape_funcs = {None: noop_escape}
+
+
+def escape_register(esctype, escfunc):
+    """Registers an escape function."""
+    sig = inspect.signature(escfunc)
+    if "context" not in {n.name for n in sig.parameters.values()}:
+        def wrap(string, context=None):
+            escfunc(string)
+        escfunc = wrap
+    escape_funcs[esctype] = escfunc
+
+
+def escape_lookup(esctype):
+    """Find an escape function."""
+    return escape_funcs.get(esctype, escape_funcs[None])
+
+
+def escape(esctype):
+    """Escape decorator function."""
+    return lambda escfunc: escape_register(esctype, escfunc)
+
+
+### Rune function handling. ###
 def noop_rune(*args, nodes=None, context=None):
     """Rune that returns it's argument nodes."""
     return nodes
@@ -95,7 +127,7 @@ def load(fpath):
 
 
 RuneNode = namedtuple("RuneNode", ("kind", "data", "nodes", "attributes"))
-RuneType = Enum("RuneType", ("RUNE", "DATA", "NULL"))
+RuneType = Enum("RuneType", ("RUNE", "NERU", "TEXT", "DATA", "NULL"))
 
 
 def mkrune(r: str, a: Sequence[object], nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode:
@@ -113,12 +145,12 @@ def mknull(nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode:
     return RuneNode(RuneType.NULL, None, nodes, attrs)
 
 
-def assemble(scroll_node: ScrollNode, format: str) -> RuneNode:
+def assemble(scroll_node: ScrollNode) -> RuneNode:
     """Assembles a rune tree from a scroll tree."""
     attrs = set()
     if scroll_node.kind == NODE_TEXT:
-        kind = RuneType.RUNE
-        data = ("escape", (scroll_node.value,))
+        kind = RuneType.TEXT
+        data = scroll_node.value
         attrs.add("collate")
     elif scroll_node.kind == NODE_BLANK:
         kind = RuneType.NULL
@@ -130,6 +162,10 @@ def assemble(scroll_node: ScrollNode, format: str) -> RuneNode:
         rune, args = scroll_node.value
         kind = RuneType.RUNE
         data = (rune, tuple(args))
+    elif scroll_node.kind == NODE_NERU:
+        rune, args = scroll_node.value
+        kind = RuneType.NERU
+        data = (rune, tuple(args))
     elif scroll_node.kind == NODE_HEADING:
         kind = RuneType.RUNE
         data = ("heading", tuple(scroll_node.value))
@@ -139,7 +175,7 @@ def assemble(scroll_node: ScrollNode, format: str) -> RuneNode:
     else:
         kind = RuneType.NULL
         data = None
-    nodes = [assemble(sn, format) for sn in scroll_node.nodes]
+    nodes = [assemble(sn) for sn in scroll_node.nodes]
     return RuneNode(kind, data, nodes, attrs)
 
 
@@ -152,13 +188,17 @@ def inscribe(node: RuneNode, rtype: str, context: dict) -> List[RuneNode]:
     for both loops and recursion and should be used with care.
     """
     nodes = node.nodes
+    if node.kind is RuneType.NERU:
+        rid, rargs = node.data
+        runefunc = lookup(rid, rtype)
+        return runefunc(*rargs, nodes=nodes, attrs=node.attributes, context=context)
     i = 0
     while i < len(nodes):
         # Runes are allowed to evaluate to 0 -> n arbitrary nodes.
         # Other nodes may only evaluate to themselves.
         # As runes can produce runes, they need to be reevaluated.
         # This allows for some nifty recursion.
-        if nodes[i].kind is RuneType.RUNE:
+        if nodes[i].kind in {RuneType.RUNE, RuneType.NERU}:
             nodes[i:i+1] = inscribe(nodes[i], rtype, context)
         else:
             inscribe(nodes[i], rtype, context)
@@ -167,3 +207,7 @@ def inscribe(node: RuneNode, rtype: str, context: dict) -> List[RuneNode]:
         rid, rargs = node.data
         runefunc = lookup(rid, rtype)
         return runefunc(*rargs, nodes=nodes, attrs=node.attributes, context=context)
+    if node.kind is RuneType.TEXT:
+        escfunc = escape_lookup(rtype)
+        node.data = escfunc(node, context=context)
+        node.kind = RuneType.DATA

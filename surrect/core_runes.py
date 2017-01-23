@@ -1,7 +1,7 @@
 import html
 
 from typing import List
-from .rune import rune, mkrune, mkdata, mknull, RuneNode, RuneType
+from .rune import escape, rune, mkrune, mkdata, mknull, RuneNode, RuneType
 
 
 def clamp(mn, n, mx):
@@ -17,15 +17,11 @@ def flatten_tree(nodes: List[RuneNode]) -> List[RuneNode]:
             flatree.append(node)
     return [RuneNode(n.kind, n.data, None, n.attributes) for n in flatree]
 
-@rune("escape")
-def escape(text, nodes=None, attrs=None, context=None):
-    """Does nothing. """
-    return [mkdata(text, attrs=attrs)]
 
-@rune("escape", "html")
-def escape_html(text, nodes=None, attrs=None, context=None):
+@escape("html")
+def escape_html(string, context=None):
     """Escapes HTML,"""
-    return [mkdata(html.escape(text), attrs=attrs)]
+    return html.escape(string)
 
 
 @rune("heading")
