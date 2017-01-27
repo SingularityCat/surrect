@@ -1,12 +1,13 @@
 from collections import Mapping
 
 def brace_lex(glob: str):
+    # escapeables = {"{", ",", "}", "\\"}
     tok = []
     escape = False
     globiter = iter(glob)
     for char in globiter:
         if escape:
-            if char != "{":
+            if char != "{" and char != "\\":
                 tok.append("\\")
             tok.append(char)
             escape = False
@@ -20,7 +21,7 @@ def brace_lex(glob: str):
             char = next(globiter)
             while char != "}":
                 if escape:
-                    if char != "}" and char != ",":
+                    if char != "}" and char != "," and char != "\\":
                         tok.append("\\")
                     tok.append(char)
                     escape = False

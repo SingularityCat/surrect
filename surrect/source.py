@@ -1,11 +1,9 @@
 from collections import namedtuple, OrderedDict
-from collections.abc import Mapping
+from collections.abc import MutableMapping
 from os import listdir, path
 
 from enum import Enum
 from typing import Tuple, Callable
-
-import html
 
 from . import scroll
 
@@ -105,10 +103,7 @@ class Source:
         self.metadata = metadata
 
 
-def category_build(catroot: str, catpath: str, sources: Mapping) -> Tuple[str, OrderedDict]:
-    if sources is None:
-        sources = {}
-
+def category_build(catroot: str, catpath: str, sources: MutableMapping) -> Tuple[str, OrderedDict]:
     # Get the category configuration.
     catcfg = category_load(catpath)
     if catcfg["scan"]:

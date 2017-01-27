@@ -3,9 +3,10 @@
 import sys
 import codecs
 
-from os import path
+from os import path, makedirs
 from functools import partial
 from shutil import copyfile
+from fnmatch import fnmatch
 
 from . import scroll
 from . import rune
@@ -89,13 +90,21 @@ class Renderer:
         self.context = root_context.copy()
         self.fmt = fmt
         self.context["type"] = self.fmt
+        # Default options:
+        self.noop = False
+        self.force = False
 
-    def ritual(self, sources):
+    def set_opt(self, noop=None, force=None):
+        if noop is not None:
+            self.noop = noop
+        if force is not None:
+            self.force = force
+
+    def ritual(self, source):
         """Prep step"""
-        for srcpath, source in sources.items():
-            source.ref = source.relpath
+        source.ref = source.relpath
 
-    def summon(self, sources, catroot):
+    def summon(self, source, catroot):
         """Output step"""
         raise NotImplementedError("summon not implemented.")
 
@@ -133,54 +142,77 @@ class SiteRenderer(Renderer):
             rune.escape_lookup(self.fmt)
         )
 
-    def ritual(self, sources):
-        for srcpath, source in sources.items():
-            ctx = self.context.copy()
-            ctx["path"] = sources.relpath
-            ctx["dir"] = path.dirname(ctx["path"])
-            ctx["filename"] = path.basename(ctx["path"])
-            ctx["filebase"], ctx["fileext"] = path.splitext(ctx["filename"])
-            ctx.update(source.metadata)
-            source.metadata = ctx
-            source.relpath = self.path_fmt.vformat(source.metadata)
-            source.ref = self.ref_fmt.vformat(source.metadata)
+    def ritual(self, source):
+        ctx = self.context.copy()
+        ctx["path"] = source.relpath
+        ctx["dir"] = path.dirname(ctx["path"])
+        ctx["filename"] = path.basename(ctx["path"])
+        ctx["filebase"], ctx["fileext"] = path.splitext(ctx["filename"])
+        ctx.update(source.metadata)
+        source.metadata = ctx
+        source.relpath = self.path_fmt.vformat(source.metadata)
+        source.ref = self.ref_fmt.vformat(source.metadata)
 
-    def summon(self, sources, catroot):
-        for srcpath, source in sources.items():
-            dstpath = path.join(self.build_dir, source.relpath)
-            if source.kind is SourceType.SCROLL:
-                with open(srcpath) as srcfile:
-                    scroll_tree = scroll.parser.parse(scroll.lexer.lex(srcfile))
+    def summon(self, source, catroot):
+        srcpath = source.source
+        dstpath = path.join(self.build_dir, source.relpath)
 
-                rune_tree = rune.assemble(scroll_tree)
-                inscribed_tree = rune.inscribe(rune_tree, self.fmt, source.metadata)
+        if self.noop:
+            # TODO: more granular handling.
+            return
 
-                with open(dstpath) as dstfile:
-                    for name in self.page_comp:
-                        if name == "main":
-                            for node in inscribed_tree:
-                                if type(node.data) is str:
-                                    dstfile.write(node.data)
-                        elif name == "nav":
-                            for fragment in self.nav_renderer(catroot, source.metadata, cursource=source):
-                                dstfile.write(fragment)
-                        elif name in self.running_blocks:
-                            block = self.running_blocks[name]
-                            dstfile.write(block.vformat(source.metadata))
-                        else:
-                            # Print warning?
-                            pass
-            elif source.kind is SourceType.RESOURCE:
-                copyfile(srcpath, dstpath)
+        makedirs(path.dirname(srcpath), exist_ok=True)
+
+        if source.kind is SourceType.SCROLL:
+            with open(srcpath, "r") as srcfile:
+                scroll_tree = scroll.parser.parse(scroll.lexer.lex(srcfile))
+
+            rune_tree = rune.assemble(scroll_tree)
+            inscribed_tree = rune.inscribe(rune_tree, self.fmt, source.metadata)
+
+            with open(dstpath, "w") as dstfile:
+                for name in self.page_comp:
+                    if name == "main":
+                        for node in inscribed_tree:
+                            if type(node.data) is str:
+                                dstfile.write(node.data)
+                    elif name == "nav":
+                        for fragment in self.nav_renderer(catroot, source.metadata, cursource=source):
+                            dstfile.write(fragment)
+                    elif name in self.running_blocks:
+                        block = self.running_blocks[name]
+                        dstfile.write(block.vformat(source.metadata))
+                    else:
+                        # Print warning?
+                        pass
+        elif source.kind is SourceType.RESOURCE:
+            copyfile(srcpath, dstpath)
 
 
-def load_renderers(cfg, build_dir, root_context):
+def load_renderers(renderer_cfg, build_dir, root_context):
     rendmap = {}
-    for rendname, rendcfg in cfg.items():
+    for rendname, rendcfg in renderer_cfg.items():
         rid, _, fmt = rendcfg["renderer"].partition(":")
         rendinst = renderer_lookup(rid)(build_dir, root_context, fmt, rendcfg)
         rendmap[rendname] = rendinst
     return rendmap
+
+
+def load_globmap(map_cfg):
+    glob_map = []
+    for metaglob, rendref in map_cfg:
+        glob_map += [(glob, rendref) for glob in brace_expand(metaglob)]
+    return glob_map
+
+
+def globmap_sources_to_renderers(sources, mapping, renderers):
+    maplst = []
+    for srcpath, source in sources:
+        for glob, rendref in mapping:
+            if fnmatch(srcpath, glob):
+                maplst.append((source, renderers[rendref]))
+                break
+    return maplst
 
 
 DEFAULT_CONFIG = {
@@ -189,8 +221,8 @@ DEFAULT_CONFIG = {
         "rune dir": "runes",
         "build dir": "build",
         "map": [
-            ["*.man.scroll", "manual"],
-            ["*.scroll", "site"]
+            ("*.man.scroll", "manual"),
+            ("*.scroll", "site")
         ],
         "context": {
         }
