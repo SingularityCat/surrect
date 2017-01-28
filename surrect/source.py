@@ -102,6 +102,12 @@ class Source:
         self.ref = None
         self.metadata = metadata
 
+    def __str__(self):
+        return "Source({0}, {1}, {2}, {3},\n{4}\n)".format(
+            self.kind, self.source, self.relpath, self.ref,
+            self.metadata
+        )
+
 
 def category_build(catroot: str, catpath: str, sources: MutableMapping) -> Tuple[str, OrderedDict]:
     # Get the category configuration.
@@ -153,6 +159,9 @@ def category_build(catroot: str, catpath: str, sources: MutableMapping) -> Tuple
                     ename = metadata["name"]
                 else:
                     ename = path.splitext(path.basename(ent.path))[0].title()
+                    metadata["name"] = ename
+            if "title" not in metadata:
+                metadata["title"] = ename
             if ent.kind != "secret":
                 catdict[ename] = srcent
             sources[srcpath] = srcent
@@ -168,4 +177,5 @@ def category_build(catroot: str, catpath: str, sources: MutableMapping) -> Tuple
 
 def source(rootcat):
     sources = OrderedDict()
-    return *category_build(rootcat, rootcat, sources), sources
+    _, catdict = category_build(rootcat, rootcat, sources)
+    return catdict, sources

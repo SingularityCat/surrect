@@ -11,10 +11,9 @@ def clamp(mn, n, mx):
 def flatten_tree(nodes: List[RuneNode]) -> List[RuneNode]:
     flatree = []
     for node in nodes:
-        if node.nodes is not None:
+        flatree.append(node)
+        if len(node.nodes) > 0:
             flatree += flatten_tree(node.nodes)
-        else:
-            flatree.append(node)
     return [RuneNode(n.kind, n.data, None, n.attributes) for n in flatree]
 
 
@@ -49,9 +48,12 @@ def root_html(nodes=None, attrs=None, context=None):
     niter = iter(flatten_tree(nodes))
     for node in niter:
         collated = []
-        while "collate" in node.attirbutes:
+        while "collate" in node.attributes:
             collated.append(node)
-            node = next(node)
+            try:
+                node = next(niter)
+            except StopIteration:
+                break
 
         if len(collated) > 0:
             collation = " ".join(coln.data.strip() for coln in collated if coln.kind is RuneType.DATA)
@@ -99,7 +101,7 @@ def list_rune_html(*args, nodes=None, attrs=None, context=None):
     tags.append("<ul>")
     for node in nodes:
         if node.kind is RuneType.DATA:
-            tags.append("<li>{0}</li>".format(node.value))
+            tags.append("<li>{0}</li>".format(node.data))
     tags.append("</ul>")
     return [mkdata("".join(tags))]
 

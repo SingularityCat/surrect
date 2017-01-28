@@ -52,7 +52,7 @@ def escape(esctype):
 
 
 ### Rune function handling. ###
-def noop_rune(*args, nodes=None, context=None):
+def noop_rune(*args, nodes=None, context=None, attrs=None):
     """Rune that returns it's argument nodes."""
     return nodes
 
@@ -96,6 +96,7 @@ def lookup(runeid, runetype=None):
     if runetype not in runes:
         runetype = None
     if runeid not in runes[runetype]:
+        runetype = None
         runeid = "noop"
     return runes[runetype][runeid]
 
@@ -132,17 +133,26 @@ RuneType = Enum("RuneType", ("RUNE", "NERU", "TEXT", "DATA", "NULL"))
 
 def mkrune(r: str, a: Sequence[object], nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode:
     """Create a RuneNode referencing a rune."""
-    return RuneNode(RuneType.RUNE, (r, a), nodes, attrs)
+    return RuneNode(RuneType.RUNE, (r, a),
+        [] if nodes is None else nodes,
+        set() if attrs is None else attrs
+    )
 
 
 def mkdata(d: str, nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode:
     """Create a data RuneNode."""
-    return RuneNode(RuneType.DATA, d, nodes, attrs)
+    return RuneNode(RuneType.DATA, d,
+        [] if nodes is None else nodes,
+        set() if attrs is None else attrs
+    )
 
 
 def mknull(nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode:
     """Create a null RuneNode"""
-    return RuneNode(RuneType.NULL, None, nodes, attrs)
+    return RuneNode(RuneType.NULL, None,
+        [] if nodes is None else nodes,
+        set() if attrs is None else attrs
+    )
 
 
 def assemble(scroll_node: ScrollNode) -> RuneNode:
@@ -198,7 +208,7 @@ def inscribe(node: RuneNode, rtype: str, context: dict) -> List[RuneNode]:
         # Other nodes may only evaluate to themselves.
         # As runes can produce runes, they need to be reevaluated.
         # This allows for some nifty recursion.
-        if nodes[i].kind in {RuneType.RUNE, RuneType.NERU}:
+        if nodes[i].kind in {RuneType.RUNE, RuneType.NERU, RuneType.TEXT}:
             nodes[i:i+1] = inscribe(nodes[i], rtype, context)
         else:
             inscribe(nodes[i], rtype, context)
@@ -209,5 +219,5 @@ def inscribe(node: RuneNode, rtype: str, context: dict) -> List[RuneNode]:
         return runefunc(*rargs, nodes=nodes, attrs=node.attributes, context=context)
     if node.kind is RuneType.TEXT:
         escfunc = escape_lookup(rtype)
-        node.data = escfunc(node, context=context)
-        node.kind = RuneType.DATA
+        escdata = escfunc(node.data, context=context)
+        return [RuneNode(RuneType.DATA, escdata, node.nodes, node.attributes)]

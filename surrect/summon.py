@@ -117,7 +117,7 @@ class SiteRenderer(Renderer):
 
     def load_cfg(self, cfg):
         """Load configuration, filling in defaults."""
-        self.base_context.update(cfg.get("context", {}))
+        self.context.update(cfg.get("context", {}))
         self.path_fmt = cfg.get("path format", "{dir}/{filebase}.{type}")
         self.reference_fmt = cfg.get("ref format", self.path_fmt)
         self.page_comp = cfg.get("page composition", ["main", "nav"])
@@ -128,17 +128,18 @@ class SiteRenderer(Renderer):
             else:
                 # If the running block is not a string, join on a newline.
                 self.running_blocks[name] = "\n".join(block)
+        nav = cfg.get("nav", {})
         self.nav_renderer = gen_navigation_renderer(
-            cfg["nav"].get("start", ""),
-            cfg["nav"].get("end", ""),
-            cfg["nav"].get("category", "{name}\n"),
-            cfg["nav"].get("indexed category", "{name} ({ref})\n"),
-            cfg["nav"].get("entry list start", ""),
-            cfg["nav"].get("entry list end", ""),
-            cfg["nav"].get("entry start", ""),
-            cfg["nav"].get("entry end", ""),
-            cfg["nav"].get("link", "{name} ({ref})\n"),
-            cfg["nav"].get("current link", "{name} ({ref})\n"),
+            nav.get("start", "").format_map,
+            nav.get("end", "").format_map,
+            nav.get("category", "{name}\n").format_map,
+            nav.get("indexed category", "{name} ({ref})\n").format_map,
+            nav.get("entry list start", "").format_map,
+            nav.get("entry list end", "").format_map,
+            nav.get("entry start", "").format_map,
+            nav.get("entry end", "").format_map,
+            nav.get("link", "{name} ({ref})\n").format_map,
+            nav.get("current link", "{name} ({ref})\n").format_map,
             rune.escape_lookup(self.fmt)
         )
 
@@ -146,12 +147,14 @@ class SiteRenderer(Renderer):
         ctx = self.context.copy()
         ctx["path"] = source.relpath
         ctx["dir"] = path.dirname(ctx["path"])
+        if ctx["dir"] == "":
+            ctx["dir"] = "."
         ctx["filename"] = path.basename(ctx["path"])
         ctx["filebase"], ctx["fileext"] = path.splitext(ctx["filename"])
         ctx.update(source.metadata)
         source.metadata = ctx
-        source.relpath = self.path_fmt.vformat(source.metadata)
-        source.ref = self.ref_fmt.vformat(source.metadata)
+        source.relpath = self.path_fmt.format_map(source.metadata)
+        source.ref = self.reference_fmt.format_map(source.metadata)
 
     def summon(self, source, catroot):
         srcpath = source.source
@@ -181,7 +184,7 @@ class SiteRenderer(Renderer):
                             dstfile.write(fragment)
                     elif name in self.running_blocks:
                         block = self.running_blocks[name]
-                        dstfile.write(block.vformat(source.metadata))
+                        dstfile.write(block.format_map(source.metadata))
                     else:
                         # Print warning?
                         pass
@@ -207,7 +210,7 @@ def load_globmap(map_cfg):
 
 def globmap_sources_to_renderers(sources, mapping, renderers):
     maplst = []
-    for srcpath, source in sources:
+    for srcpath, source in sources.items():
         for glob, rendref in mapping:
             if fnmatch(srcpath, glob):
                 maplst.append((source, renderers[rendref]))
