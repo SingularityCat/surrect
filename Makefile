@@ -1,4 +1,4 @@
-.PHONY: all clean build test unit
+.PHONY: all clean build test unit install
 
 all: test build
 
@@ -12,3 +12,6 @@ test: unit
 
 unit:
 	python -m unittest discover -t ./ -s ./test/
+
+install:
+	pip install --user -I ./dist/surrect-*.whl

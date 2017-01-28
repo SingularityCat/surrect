@@ -44,7 +44,7 @@ def gen_navigation_renderer(wrap_init_func,
                 yield cat_func(ctx)
             yield nav_init_func(ctx)
         for name, source in catdat.items():
-            if name is None:
+            if name is None or name is "..":
                 continue
             name = escape_func(name, context=ctx)
             if entrywrap:

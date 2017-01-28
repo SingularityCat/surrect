@@ -51,7 +51,7 @@ Catfiles have the from:
 """
 
 from collections import namedtuple
-from . import lexer, parser
+from . import lexer, parser, tree
 from .util import interpret_bool, interpret_str, interpret_strlist
 
 # Functions for lexing/parsing 'catfiles'.

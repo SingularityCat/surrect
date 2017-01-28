@@ -87,7 +87,8 @@ def gen_mode(args):
             return 0
         with open(args.summonfile, "w") as cfgdst:
             out("Generating Summonfile at \"%s\"" % args.summonfile)
-            json.dump(DEFAULT_CONFIG, cfgdst)
+            json.dump(DEFAULT_CONFIG, cfgdst, indent=4, sort_keys=True, ensure_ascii=False)
+            cfgdst.write("\n")
             return 0
     else:
         out("Not overwriting Summonfile at \"%s\"" % args.summonfile)

@@ -46,6 +46,7 @@ def root_html(nodes=None, attrs=None, context=None):
     """HTML root node processor. Joins data nodes with the 'collate' attribute."""
     tree = []
     niter = iter(flatten_tree(nodes))
+    eon = False
     for node in niter:
         collated = []
         while "collate" in node.attributes:
@@ -53,12 +54,14 @@ def root_html(nodes=None, attrs=None, context=None):
             try:
                 node = next(niter)
             except StopIteration:
+                eon = True
                 break
 
         if len(collated) > 0:
             collation = " ".join(coln.data.strip() for coln in collated if coln.kind is RuneType.DATA)
             tree.append(mkdata("<p>" + collation + "</p>"))
-        tree.append(node)
+        if not eon:
+            tree.append(node)
 
     return tree
 
