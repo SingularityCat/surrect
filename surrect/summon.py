@@ -33,7 +33,7 @@ def gen_navigation_renderer(wrap_init_func,
     def navigation_render(catdat, ctx, catname=None, cursource=None, function_entry=True):
         ctx = ctx.copy()
         if function_entry:
-            wrap_init_func(ctx)
+            yield wrap_init_func(ctx)
         entrywrap = bool(catname)
         if entrywrap:
             ctx["name"] = catname
@@ -44,7 +44,7 @@ def gen_navigation_renderer(wrap_init_func,
                 yield cat_func(ctx)
             yield nav_init_func(ctx)
         for name, source in catdat.items():
-            if name is None or name is "..":
+            if name is None or name == "..":
                 continue
             name = escape_func(name, context=ctx)
             if entrywrap:
@@ -52,6 +52,11 @@ def gen_navigation_renderer(wrap_init_func,
             # If we encounter a category here, recurse into it.
             if isinstance(source, dict):
                 yield from navigation_render(source, ctx, name, cursource, function_entry=False)
+            # If the source is a string (what a link entry in catfiles become).
+            elif isinstance(source, str):
+                ctx["name"] = name
+                ctx["ref"] = source
+                yield lnk_func(ctx)
             else:
                 ctx["name"] = name
                 ctx["ref"] = source.ref
@@ -64,7 +69,7 @@ def gen_navigation_renderer(wrap_init_func,
         if entrywrap:
             yield nav_fini_func(ctx)
         if function_entry:
-            wrap_fini_func(ctx)
+            yield wrap_fini_func(ctx)
 
     return navigation_render
 
@@ -164,7 +169,7 @@ class SiteRenderer(Renderer):
             # TODO: more granular handling.
             return
 
-        makedirs(path.dirname(srcpath), exist_ok=True)
+        makedirs(path.dirname(dstpath), exist_ok=True)
 
         if source.kind is SourceType.SCROLL:
             with open(srcpath, "r") as srcfile:
