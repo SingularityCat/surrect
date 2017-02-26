@@ -38,14 +38,17 @@ BNF:
 Catfiles are simple key, value pair files, designed to hold
 information about a category and how it sould be constructed.
 
-Parsed catfiles have 5 valid keys, "name", "index",
-"page", "link" and "exclude".
+Parsed catfiles have 11 valid keys, "name", "index", "scan",
+"page", "secret", "asis", "resource", "link", and "exclude"
+as well as an alias "ignore".
+
 
 Catfiles have the from:
 <catfile> ::= <kvp> | <catfile> "\\n" <kvp>
 
 <kvp> ::= <key> : <value>
-<key> ::= "name" | "index" | "page" | "link" | "exclude"
+<key> ::= "name" | "index" | "page" | "secret" | "asis" | "resource" | "link"
+          | "exclude" | "ignore"
 <value> ::= <argstr>
 
 """
@@ -74,7 +77,7 @@ def catparse(tokens):
             catdict[k] = interpret_str(v)
         elif k in {"scan"}:
             catdict[k] = interpret_bool(v)
-        elif k in {"subcat", "page", "link", "resource", "secret"}:
+        elif k in {"subcat", "page", "secret", "asis", "resource", "link"}:
             # These types are all "kind: [name] path"
             vn = interpret_strlist(v)[:2]
             if len(vn) > 0:

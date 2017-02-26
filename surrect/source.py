@@ -1,4 +1,4 @@
-from collections import namedtuple, OrderedDict
+from collections import OrderedDict
 from collections.abc import MutableMapping
 from os import listdir, path
 
@@ -84,98 +84,178 @@ def category_scan(catcfg: dict) -> None:
             continue
         rp = path.join(catpath, p)
         if path.isdir(rp):
-            sce = scroll.CatEntry("subcat", None, p)
+            sce = scroll.CatEntry("subcat", p.strip().strip(path.sep).title(), p)
             catcfg["entries"].append(sce)
         elif path.exists(rp) and rp.endswith(".scroll"):
             sce = scroll.CatEntry("page", None, p)
             catcfg["entries"].append(sce)
 
 
-SourceType = Enum("SourceType", ("SCROLL", "RESOURCE", "LINK"))
-class Source:
-    __slots__ = ("kind", "source", "relpath", "ref", "metadata")
+class Entity:
+    __slots__ = ("name", "toc")
 
-    def __init__(self, kind, source, relpath, metadata):
+
+SourceType = Enum("SourceType", ("SCROLL", "RESOURCE"))
+
+
+class Source(Entity):
+    __slots__ = ("kind", "source", "destination", "metadata")
+
+    def __init__(self, kind, name, toc, source, destination, metadata):
         self.kind = kind
+        self.toc = toc
         self.source = source
-        self.relpath = relpath
-        self.ref = None
-        self.metadata = metadata
+        # Note that distination will likely be rewritten by a renderer.
+        self.destination = destination
+        self.metadata = metadata if metadata is not None else {}
+        if name is None:
+            if name in self.metadata:
+                self.name = self.metadata["name"]
+            else:
+                n = path.splitext(path.basename(source))[0].title()
+                self.name = self.metadata["name"] = n
 
-    def __str__(self):
-        return "Source({0}, {1}, {2}, {3},\n{4}\n)".format(
-            self.kind, self.source, self.relpath, self.ref,
-            self.metadata
+        else:
+            self.name = self.metadata["name"] = self.name
+        if "title" not in self.metadata:
+            self.metadata["title"] = self.name
+
+    def __repr__(self):
+        return "Source({0}, {1}, {2}, {3}, {4}, {5})".format(
+            repr(self.kind), repr(self.name), repr(self.toc),
+            repr(self.source), repr(self.destination),
+            repr(self.metadata)
         )
 
 
-def category_build(catroot: str, catpath: str, sources: MutableMapping) -> Tuple[str, OrderedDict]:
+class Link(Entity):
+    __slots__ = ("ref",)
+
+    def __init__(self, name, toc, ref):
+        self.toc = toc
+        self.ref = ref
+        if name is None:
+            self.name = ref
+        else:
+            self.anme = name
+
+    def __repr__(self):
+        return "Link({0}, {1}, {2})".format(
+            repr(self.name), repr(self.toc), repr(self.ref)
+        )
+
+
+class Category(Entity, MutableMapping):
+    __slots__ = ("index", "parent", "entities")
+
+    def __init__(self, name):
+        self.name = name
+        self.toc = True
+        self.index = None
+        self.parent = self
+        self.entities = OrderedDict()
+
+    def __setitem__(self, key, val):
+        if key == "..":
+            if isinstance(val, Category):
+                self.parent = val
+            else:
+                raise TypeError("Cannot assign non-category as parent.")
+        else:
+            if isinstance(val, Entity):
+                self.entities[key] = val
+            else:
+                raise TypeError("Cannot assign non-entity to a category key.")
+        return val
+
+    def __getitem__(self, key):
+        if key == "..":
+            return self.parent
+        else:
+            return self.entities[key]
+
+    def __delitem__(self, key):
+        if key == "..":
+            self.parent = self
+        else:
+            del self.entities[key]
+
+    def __len__(self):
+        return len(self.entities)
+
+    def __iter__(self):
+        return iter(self.entities.values())
+
+    def add(self, ent: Entity):
+        if ent.name is None:
+            if isinstance(ent, Category):
+                self.entities[id(ent)] = ent
+            else:
+                raise ValueError("Only category entities can be anonymous")
+        else:
+            self.entities[ent.name] = ent
+
+    def sources(self):
+        if isinstance(self.index, Source):
+            yield self.index
+        for entity in self.entities.values():
+            if isinstance(entity, Category):
+                yield from entity.sources()
+            elif isinstance(entity, Source):
+                yield entity
+
+
+def category_build(catroot: str, catpath: str=None, name: str=None) -> Category:
+    if catpath is None:
+        catpath = catroot
+
     # Get the category configuration.
     catcfg = category_load(catpath)
     if catcfg["scan"]:
         category_scan(catcfg)
     catpath = catcfg["catpath"]
     exclude = catcfg["exclude"]
-    # The category dict.
-    catdict = OrderedDict()
+
+    # The category object.
+    cat = Category(name)
 
     if catcfg["index"] is not None:
         srcpath = path.abspath(path.join(catpath, catcfg["index"]))
         relpath = path.relpath(srcpath, start=catroot)
 
         if path.exists(srcpath):
-            srcent = Source(SourceType.SCROLL, srcpath, relpath, read_scroll_metadata(srcpath))
-            catdict[None] = srcent
-            sources[srcpath] = srcent
+            metadata = read_scroll_metadata(srcpath)
+            srcent = Source(SourceType.SCROLL, None, False,
+                            srcpath, relpath, metadata)
+            cat.index = srcent
             exclude.add(catcfg["index"])
 
     for ent in catcfg["entries"]:
-        ename = ent.name
         # Category and scroll paths are all relative to their directory.
         srcpath = path.abspath(path.join(catpath, ent.path))
         relpath = path.relpath(srcpath, start=catroot)
         if ent.path in exclude:
             # Nothing to do.
             continue
-        if srcpath in sources:
-            # Print a warning?
-            continue
         if ent.kind == "subcat":
-            scn, scd = category_build(catroot, srcpath, sources)
-            if ename is None:
-                ename = scn
-            catdict[ename] = scd
-            if ".." not in scd:
-                # Set parent category reference.
-                scd[".."] = catdict
-        elif ent.kind == "resource":
-            sources[srcpath] = Source(SourceType.RESOURCE, srcpath, relpath, {})
+            sco = category_build(catroot, srcpath, ent.name)
+            # Set parent category reference.
+            sco.parent = cat
+            cat.add(sco)
         elif (ent.kind == "page" or ent.kind == "secret") \
                 and path.exists(srcpath):
             metadata = read_scroll_metadata(srcpath)
-            srcent = Source(SourceType.SCROLL, srcpath, relpath, metadata)
-            if ename is None:
-                if "name" in metadata:
-                    ename = metadata["name"]
-                else:
-                    ename = path.splitext(path.basename(ent.path))[0].title()
-                    metadata["name"] = ename
-            if "title" not in metadata:
-                metadata["title"] = ename
-            if ent.kind != "secret":
-                catdict[ename] = srcent
-            sources[srcpath] = srcent
+            srcent = Source(SourceType.SCROLL, ent.name, True if ent.kind != "secret" else False,
+                            srcpath, relpath, metadata)
+            cat.add(srcent)
+        elif (ent.kind == "asis" or ent.kind == "resource") \
+                and path.exists(srcpath):
+            cat.add(Source(SourceType.RESOURCE, ent.name, True if ent.kind != "resource" else False,
+                           srcpath, relpath, None))
         elif ent.kind == "link":
-            if ename is None:
-                ename = ent.path
-            catdict[ename] = ent.path
+            cat.add(Link(ent.name, True, ent.path))
         else:
             # Print a warning?
             continue
-    return catcfg["name"], catdict
+    return cat
 
-
-def source(rootcat):
-    sources = OrderedDict()
-    _, catdict = category_build(rootcat, rootcat, sources)
-    return catdict, sources

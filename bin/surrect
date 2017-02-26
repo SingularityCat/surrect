@@ -1,4 +1,4 @@
 #!/usr/bin/env python3
-from surrect import core_runes
+from surrect import core_runes, core_format
 from surrect import cli
 exit(cli.main())

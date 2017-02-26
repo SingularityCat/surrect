@@ -1,4 +1,4 @@
-from . import core_runes
+from . import core_runes, core_format
 from .cli import main
 
 if __name__ == "__main__":

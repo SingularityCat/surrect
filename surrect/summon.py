@@ -1,4 +1,4 @@
-"""summon: Ancillary stuff related to surrect."""
+"""summon: Core surrect logic."""
 
 import sys
 import codecs
@@ -9,9 +9,10 @@ from shutil import copyfile
 from fnmatch import fnmatch
 
 from . import scroll
+from . import registries
 from . import rune
-from .source import source, SourceType
-from .util import brace_expand
+from .source import Category, Source, SourceType, Link
+from .util import path_attributes, brace_expand
 
 
 def get_outfunc_msg(colour=sys.stdout.isatty()):
@@ -29,38 +30,37 @@ def gen_navigation_renderer(wrap_init_func,
                             idxcat_func,
                             lnk_func,
                             curlnk_func,
-                            escape_func):
-    def navigation_render(catdat, ctx, catname=None, cursource=None, function_entry=True):
+                            escape_func,
+                            ref_func):
+    def navigation_render(cat: Category, current: Source, ctx, function_entry=True):
         ctx = ctx.copy()
         if function_entry:
             yield wrap_init_func(ctx)
-        entrywrap = bool(catname)
+        entrywrap = bool(cat.name)
         if entrywrap:
-            ctx["name"] = catname
-            if None in catdat:
-                ctx["ref"] = catdat[None].ref
+            ctx["name"] = cat.name
+            if cat.index is not None:
+                ctx["ref"] = ref_func(cat.index, current)
                 yield idxcat_func(ctx)
             else:
                 yield cat_func(ctx)
             yield nav_init_func(ctx)
-        for name, source in catdat.items():
-            if name is None or name == "..":
+        for ent in cat:
+            if not ent.toc:
                 continue
-            name = escape_func(name, context=ctx)
             if entrywrap:
                 yield ent_init_func(ctx)
             # If we encounter a category here, recurse into it.
-            if isinstance(source, dict):
-                yield from navigation_render(source, ctx, name, cursource, function_entry=False)
-            # If the source is a string (what a link entry in catfiles become).
-            elif isinstance(source, str):
-                ctx["name"] = name
-                ctx["ref"] = source
-                yield lnk_func(ctx)
+            if isinstance(ent, Category):
+                yield from navigation_render(ent, current, ctx, function_entry=False)
             else:
+                name = escape_func(ent.name, context=ctx)
                 ctx["name"] = name
-                ctx["ref"] = source.ref
-                if source is cursource:
+                if isinstance(ent, Source):
+                    ctx["ref"] = ref_func(ent, current)
+                elif isinstance(ent, Link):
+                    ctx["ref"] = ent.ref
+                if ent is current:
                     yield curlnk_func(ctx)
                 else:
                     yield lnk_func(ctx)
@@ -107,7 +107,7 @@ class Renderer:
 
     def ritual(self, source):
         """Prep step"""
-        source.ref = source.relpath
+        pass
 
     def summon(self, source, catroot):
         """Output step"""
@@ -123,7 +123,7 @@ class SiteRenderer(Renderer):
     def load_cfg(self, cfg):
         """Load configuration, filling in defaults."""
         self.context.update(cfg.get("context", {}))
-        self.path_fmt = cfg.get("path format", "{dir}/{filebase}.{type}")
+        self.path_fmt = cfg.get("path format", "{dir}{filebase}.{type}")
         self.reference_fmt = cfg.get("ref format", self.path_fmt)
         self.page_comp = cfg.get("page composition", ["main", "nav"])
         self.running_blocks = {}
@@ -137,33 +137,30 @@ class SiteRenderer(Renderer):
         self.nav_renderer = gen_navigation_renderer(
             nav.get("start", "").format_map,
             nav.get("end", "").format_map,
-            nav.get("category", "{name}\n").format_map,
-            nav.get("indexed category", "{name} ({ref})\n").format_map,
             nav.get("entry list start", "").format_map,
             nav.get("entry list end", "").format_map,
             nav.get("entry start", "").format_map,
             nav.get("entry end", "").format_map,
+            nav.get("category", "{name}\n").format_map,
+            nav.get("indexed category", "{name} ({ref})\n").format_map,
             nav.get("link", "{name} ({ref})\n").format_map,
             nav.get("current link", "{name} ({ref})\n").format_map,
-            rune.escape_lookup(self.fmt)
+            registries.escape_lookup(self.fmt),
+            lambda src, cur: self.reference_fmt.format_map(
+                                registries.referencer_lookup(self.fmt)(src, cur)
+                             )
         )
 
     def ritual(self, source):
         ctx = self.context.copy()
-        ctx["path"] = source.relpath
-        ctx["dir"] = path.dirname(ctx["path"])
-        if ctx["dir"] == "":
-            ctx["dir"] = "."
-        ctx["filename"] = path.basename(ctx["path"])
-        ctx["filebase"], ctx["fileext"] = path.splitext(ctx["filename"])
         ctx.update(source.metadata)
+        path_attributes(source.destination, ctx)
         source.metadata = ctx
-        source.relpath = self.path_fmt.format_map(source.metadata)
-        source.ref = self.reference_fmt.format_map(source.metadata)
+        source.destination = self.path_fmt.format_map(source.metadata)
 
     def summon(self, source, catroot):
         srcpath = source.source
-        dstpath = path.join(self.build_dir, source.relpath)
+        dstpath = path.join(self.build_dir, source.destination)
 
         if self.noop:
             # TODO: more granular handling.
@@ -185,7 +182,7 @@ class SiteRenderer(Renderer):
                             if type(node.data) is str:
                                 dstfile.write(node.data)
                     elif name == "nav":
-                        for fragment in self.nav_renderer(catroot, source.metadata, cursource=source):
+                        for fragment in self.nav_renderer(catroot, source, source.metadata):
                             dstfile.write(fragment)
                     elif name in self.running_blocks:
                         block = self.running_blocks[name]
@@ -215,9 +212,9 @@ def load_globmap(map_cfg):
 
 def globmap_sources_to_renderers(sources, mapping, renderers):
     maplst = []
-    for srcpath, source in sources.items():
+    for source in sources:
         for glob, rendref in mapping:
-            if fnmatch(srcpath, glob):
+            if fnmatch(source.source, glob):
                 maplst.append((source, renderers[rendref]))
                 break
     return maplst
@@ -246,8 +243,8 @@ DEFAULT_CONFIG = {
         },
         "site": {
             "renderer": "site:html",
-            "path format": "{dir}/{filebase}.html",
-            "ref format": "{dir}/{filebase}.html",
+            "path format": "{dir}{filebase}.html",
+            "ref format": "{dir}{filebase}.html",
             "page composition": ["head", "main", "nav", "tail"],
             "nav": {
                 "start": "<nav id=\"navigation\">",

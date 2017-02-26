@@ -1,16 +1,12 @@
 
 """
-rune - module containing the rune decorator, some registries
-and some built in runes.
+rune - module containing the rune decorator, rune registry and some built in runes.
 
-A rune is a python function that returns a
-list or tuple of 0 or more nodes.
+A rune is a python function that returns a list or tuple of 0 or more nodes.
 
 All runes have a specific signature:
     function(args*, nodes=[list of nodes], attrs={set of attributes}, context={dict of context})
 If a rune function does not accept all of the required keyword args, it is wrapped.
-
-This module also defines the 'escape' decorator + registry.
 """
 
 import inspect
@@ -19,39 +15,10 @@ from collections import namedtuple
 from enum import Enum
 from typing import List, Set, Sequence
 
+from .registries import escape_lookup, escape, referencer
 from .scroll.tree import ScrollNode, NODE_BLANK, NODE_RAW, NODE_ROOT, NODE_RUNE, NODE_NERU, NODE_HEADING, NODE_TEXT
 
 
-### Escape function handling. ###
-def noop_escape(string, context=None):
-    """Escape function that does no transformation on the string."""
-    return string
-
-
-escape_funcs = {None: noop_escape}
-
-
-def escape_register(esctype, escfunc):
-    """Registers an escape function."""
-    sig = inspect.signature(escfunc)
-    if "context" not in {n.name for n in sig.parameters.values()}:
-        def wrap(string, context=None):
-            escfunc(string)
-        escfunc = wrap
-    escape_funcs[esctype] = escfunc
-
-
-def escape_lookup(esctype):
-    """Find an escape function."""
-    return escape_funcs.get(esctype, escape_funcs[None])
-
-
-def escape(esctype):
-    """Escape decorator function."""
-    return lambda escfunc: escape_register(esctype, escfunc)
-
-
-### Rune function handling. ###
 def noop_rune(*args, nodes=None, context=None, attrs=None):
     """Rune that returns it's argument nodes."""
     return nodes
@@ -122,6 +89,9 @@ def load(fpath):
             "mkrune": mkrune,
             "mkdata": mkdata,
             "mknull": mknull,
+            # include the other registry decorators
+            "escape": escape,
+            "referencer": referencer
         }
         code = compile(src.read(), fpath, "exec",)
         exec(code, runescope)

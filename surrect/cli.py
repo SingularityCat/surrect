@@ -1,16 +1,14 @@
 import json
 
-from collections import OrderedDict
-
 from logging import getLogger, ERROR, WARNING, INFO, DEBUG
-from os import listdir, makedirs, mkdir, path, unlink, walk
+from os import listdir, mkdir, path, walk
 from argparse import ArgumentParser
-from shutil import copyfile, rmtree
+from shutil import rmtree
 
 from . import meta
 
 from .rune import describe as rune_describe, load as rune_load
-from .source import category_build
+from .source import Category, category_build
 from .summon import get_outfunc_msg, load_renderers, load_globmap, globmap_sources_to_renderers, DEFAULT_CONFIG
 
 mode_choices = {"build", "gen", "runes"}
@@ -124,7 +122,6 @@ def main():
 
     cat_root = cfg["summon"]["root dir"]    # category root, aka root dir
     phy_root = cfg["summon"]["build dir"]   # physical root, aka build dir
-    log_root = cfg["summon"]["prefix"]      # logical root, aka prefix
     rune_dir = cfg["summon"]["rune dir"]    # location of runes.
 
     # Load runes.
@@ -151,9 +148,20 @@ def main():
             renderer.set_opt(noop=args.noop, force=args.force)
 
         out("Gathering source information...")
-        sources = OrderedDict()
-        _, category_tree = category_build(cat_root, cat_root, sources)
-        src_rend_list = globmap_sources_to_renderers(sources, globmap, renderers)
+        category_tree = category_build(cat_root)
+        log.info("source tree:")
+        def log_cat_tree(cat, indent=""):
+            for ent in cat:
+                if isinstance(ent, Category):
+                    if ent.index is not None:
+                        out("{0} - {1} : {2}".format(indent, ent.name, ent.index.destination))
+                    else:
+                        out("{0} - {1}".format(indent, ent.name))
+                    log_cat_tree(ent, indent + "    ")
+                else:
+                    out("{0} - {1} : {2}".format(indent, ent.name, ent.destination))
+        log_cat_tree(category_tree)
+        src_rend_list = globmap_sources_to_renderers(category_tree.sources(), globmap, renderers)
 
         if path.exists(phy_root):
             if len(listdir(phy_root)) > 0:

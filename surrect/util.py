@@ -1,4 +1,23 @@
+from os import path
+
 from collections import Mapping
+
+def path_attributes(pth: str, attrs=None) -> dict:
+    """
+    Fills a dict with 'path', 'dir', 'filename' and 'filebase'
+    entries, taken from the path provided.
+
+    If no dictionary is given, a new one is returned.
+    """
+    if attrs is None:
+        attrs = {}
+    attrs["path"] = pth
+    direc, filen = path.split(pth)
+    attrs["dir"] = path.join(direc, "")
+    attrs["filename"] = filen
+    attrs["filebase"], attrs["fileext"] = path.splitext(filen)
+    return attrs
+
 
 def brace_lex(glob: str):
     # escapeables = {"{", ",", "}", "\\"}
@@ -43,7 +62,7 @@ def brace_lex(glob: str):
 
 
 def brace_expand(glob: str):
-    """Do brace expansion."""
+    """Does brace expansion."""
     terminals = [""]
     for part in brace_lex(glob):
         if isinstance(part, tuple):
