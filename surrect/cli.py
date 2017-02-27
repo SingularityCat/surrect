@@ -153,13 +153,10 @@ def main():
         def log_cat_tree(cat, indent=""):
             for ent in cat:
                 if isinstance(ent, Category):
-                    if ent.index is not None:
-                        out("{0} - {1} : {2}".format(indent, ent.name, ent.index.destination))
-                    else:
-                        out("{0} - {1}".format(indent, ent.name))
+                    out("{0} - {1}".format(indent, ent))
                     log_cat_tree(ent, indent + "    ")
                 else:
-                    out("{0} - {1} : {2}".format(indent, ent.name, ent.destination))
+                    out("{0} - {1}".format(indent, ent))
         log_cat_tree(category_tree)
         src_rend_list = globmap_sources_to_renderers(category_tree.sources(), globmap, renderers)
 

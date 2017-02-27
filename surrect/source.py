@@ -45,7 +45,7 @@ def category_load(catpath: str) -> dict:
     # Normalise the path.
     catpath = path.normpath(catpath)
     # Choose a default name based on the last part of the path.
-    default_name = path.basename(catpath).strip().title()
+    default_name = path.basename(catpath).strip().strip(path.sep).title()
     cfpath = catpath
     if path.isdir(catpath):
         cfpath = path.join(catpath, "cat")
@@ -84,7 +84,7 @@ def category_scan(catcfg: dict) -> None:
             continue
         rp = path.join(catpath, p)
         if path.isdir(rp):
-            sce = scroll.CatEntry("subcat", p.strip().strip(path.sep).title(), p)
+            sce = scroll.CatEntry("subcat", None, p)
             catcfg["entries"].append(sce)
         elif path.exists(rp) and rp.endswith(".scroll"):
             sce = scroll.CatEntry("page", None, p)
@@ -101,7 +101,7 @@ SourceType = Enum("SourceType", ("SCROLL", "RESOURCE"))
 class Source(Entity):
     __slots__ = ("kind", "source", "destination", "metadata")
 
-    def __init__(self, kind, name, toc, source, destination, metadata):
+    def __init__(self, kind, name, toc, source, destination, metadata, relsrc=None):
         self.kind = kind
         self.toc = toc
         self.source = source
@@ -112,13 +112,18 @@ class Source(Entity):
             if name in self.metadata:
                 self.name = self.metadata["name"]
             else:
-                n = path.splitext(path.basename(source))[0].title()
+                if toc or relsrc is None:
+                    n = path.splitext(path.basename(source))[0].title()
+                else:
+                    n = relsrc
                 self.name = self.metadata["name"] = n
-
         else:
-            self.name = self.metadata["name"] = self.name
+            self.name = self.metadata["name"] = name
         if "title" not in self.metadata:
             self.metadata["title"] = self.name
+
+    def __str__(self):
+        return self.name + " : " + self.destination
 
     def __repr__(self):
         return "Source({0}, {1}, {2}, {3}, {4}, {5})".format(
@@ -137,7 +142,10 @@ class Link(Entity):
         if name is None:
             self.name = ref
         else:
-            self.anme = name
+            self.name = name
+
+    def __str__(self):
+        return self.name + " : " + self.ref
 
     def __repr__(self):
         return "Link({0}, {1}, {2})".format(
@@ -154,6 +162,16 @@ class Category(Entity, MutableMapping):
         self.index = None
         self.parent = self
         self.entities = OrderedDict()
+
+    def __str__(self):
+        if self.name is not None:
+            fn = self.name
+        else:
+            fn = "[root]"
+        if self.index is not None:
+            return fn + " : " + str(self.index)
+        else:
+            return fn
 
     def __setitem__(self, key, val):
         if key == "..":
@@ -187,13 +205,10 @@ class Category(Entity, MutableMapping):
         return iter(self.entities.values())
 
     def add(self, ent: Entity):
-        if ent.name is None:
-            if isinstance(ent, Category):
-                self.entities[id(ent)] = ent
-            else:
-                raise ValueError("Only category entities can be anonymous")
-        else:
+        if ent.name is not None:
             self.entities[ent.name] = ent
+        else:
+            raise ValueError("category entities cannot be anonymous")
 
     def sources(self):
         if isinstance(self.index, Source):
@@ -206,7 +221,9 @@ class Category(Entity, MutableMapping):
 
 
 def category_build(catroot: str, catpath: str=None, name: str=None) -> Category:
+    root = False
     if catpath is None:
+        root = True
         catpath = catroot
 
     # Get the category configuration.
@@ -217,7 +234,7 @@ def category_build(catroot: str, catpath: str=None, name: str=None) -> Category:
     exclude = catcfg["exclude"]
 
     # The category object.
-    cat = Category(name)
+    cat = Category(None if root else name or catcfg["name"])
 
     if catcfg["index"] is not None:
         srcpath = path.abspath(path.join(catpath, catcfg["index"]))
@@ -234,6 +251,7 @@ def category_build(catroot: str, catpath: str=None, name: str=None) -> Category:
         # Category and scroll paths are all relative to their directory.
         srcpath = path.abspath(path.join(catpath, ent.path))
         relpath = path.relpath(srcpath, start=catroot)
+
         if ent.path in exclude:
             # Nothing to do.
             continue
@@ -245,13 +263,12 @@ def category_build(catroot: str, catpath: str=None, name: str=None) -> Category:
         elif (ent.kind == "page" or ent.kind == "secret") \
                 and path.exists(srcpath):
             metadata = read_scroll_metadata(srcpath)
-            srcent = Source(SourceType.SCROLL, ent.name, True if ent.kind != "secret" else False,
-                            srcpath, relpath, metadata)
-            cat.add(srcent)
+            cat.add(Source(SourceType.SCROLL, ent.name, True if ent.kind != "secret" else False,
+                           srcpath, relpath, metadata, ent.path))
         elif (ent.kind == "asis" or ent.kind == "resource") \
                 and path.exists(srcpath):
             cat.add(Source(SourceType.RESOURCE, ent.name, True if ent.kind != "resource" else False,
-                           srcpath, relpath, None))
+                           srcpath, relpath, None, ent.path))
         elif ent.kind == "link":
             cat.add(Link(ent.name, True, ent.path))
         else:
