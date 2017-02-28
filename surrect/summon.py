@@ -144,7 +144,11 @@ class SiteRenderer(Renderer):
     def load_cfg(self, cfg):
         """Load configuration, filling in defaults."""
         self.context.update(cfg.get("context", {}))
-        self.path_fmt = cfg.get("path format", "{dir}{filebase}.{type}")
+        cfg_fmt = cfg.get("path format", "{path}")
+        if isinstance(cfg_fmt, str):
+            self.path_fmt = partial(self.path_fmt_single, cfg_fmt)
+        else:
+            self.path_fmt = partial(self.path_fmt_mapping, cfg_fmt)
         self.page_comp = cfg.get("page composition", ["main", "nav"])
         self.running_blocks = {}
         for name, block in cfg.get("running blocks", {}).items():
@@ -169,16 +173,32 @@ class SiteRenderer(Renderer):
             registries.referencer_lookup(self.fmt)
         )
 
+    @staticmethod
+    def path_fmt_mapping(fmap, source):
+        for glob, fmt in fmap:
+            if fnmatch(source.destination, glob):
+                source.destination = fmt.format_map(source.metadata)
+                break
+
+    @staticmethod
+    def path_fmt_single(fmt, source):
+        source.destination = fmt.format_map(source.metadata)
+
     def ritual(self, source):
         ctx = self.context.copy()
         ctx.update(source.metadata)
         path_attributes(source.destination, ctx)
         source.metadata = ctx
-        source.destination = self.path_fmt.format_map(source.metadata)
+        self.path_fmt(source)
 
     def summon(self, source, catroot):
         srcpath = source.source
         dstpath = path.join(self.build_dir, source.destination)
+
+        source.metadata["ref"] = Referencer(
+            catroot, source,
+            registries.referencer_lookup(self.fmt)
+        )
 
         if self.noop:
             # TODO: more granular handling.
@@ -245,7 +265,8 @@ DEFAULT_CONFIG = {
         "build dir": "build",
         "map": [
             ("*.man.scroll", "manual"),
-            ("*.scroll", "site")
+            ("*.scroll", "site"),
+            ("*", "site")
         ],
         "context": {
         }
@@ -254,14 +275,16 @@ DEFAULT_CONFIG = {
         "manual": {
             "renderer": "site:man",
             "path format": "man/{section}/{filebase}.{section}",
-            "ref format": "{filebase}({section})",
             "page": {
                 "order": "main"
             }
         },
         "site": {
             "renderer": "site:html",
-            "path format": "{dir}{filebase}.html",
+            "path format": [
+                ("*.scroll", "{dir}{filebase}.html"),
+                ("*", "{dir}{filebase}{fileext}")
+            ],
             "page composition": ["head", "main", "nav", "tail"],
             "nav": {
                 "start": "<nav id=\"navigation\">",
