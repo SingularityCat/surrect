@@ -89,6 +89,27 @@ def renderer_lookup(rendid):
     return renderers[rendid]
 
 
+class Referencer:
+    def __init__(self, cat, current, ref_func):
+        self.cat = cat
+        self.current = current
+        self.ref_func = ref_func
+
+    def __getitem__(self, key):
+        return RecursiveReferencer(self.cat, self.current, self.ref_func)[key]
+
+
+class RecursiveReferencer(Referencer):
+    def __getitem__(self, key):
+        ent = self.cat[key]
+        if isinstance(ent, Category):
+            self.cat = ent
+            return self
+        elif isinstance(ent, Source):
+            return self.ref_func(ent, self.current)
+        elif isinstance(ent, Link):
+            return ent.ref
+
 class Renderer:
     def __init__(self, build_dir, root_context, fmt):
         self.build_dir = build_dir
@@ -124,7 +145,6 @@ class SiteRenderer(Renderer):
         """Load configuration, filling in defaults."""
         self.context.update(cfg.get("context", {}))
         self.path_fmt = cfg.get("path format", "{dir}{filebase}.{type}")
-        self.reference_fmt = cfg.get("ref format", self.path_fmt)
         self.page_comp = cfg.get("page composition", ["main", "nav"])
         self.running_blocks = {}
         for name, block in cfg.get("running blocks", {}).items():
@@ -146,9 +166,7 @@ class SiteRenderer(Renderer):
             nav.get("link", "{name} ({ref})\n").format_map,
             nav.get("current link", "{name} ({ref})\n").format_map,
             registries.escape_lookup(self.fmt),
-            lambda src, cur: self.reference_fmt.format_map(
-                                registries.referencer_lookup(self.fmt)(src, cur)
-                             )
+            registries.referencer_lookup(self.fmt)
         )
 
     def ritual(self, source):
@@ -244,7 +262,6 @@ DEFAULT_CONFIG = {
         "site": {
             "renderer": "site:html",
             "path format": "{dir}{filebase}.html",
-            "ref format": "{dir}{filebase}.html",
             "page composition": ["head", "main", "nav", "tail"],
             "nav": {
                 "start": "<nav id=\"navigation\">",

@@ -1,4 +1,3 @@
-
 """
 registries - module containing format-related registries, lookup functions and decorators.
 
@@ -18,8 +17,7 @@ The parameters are:
     - The source entity being referred to.
     - The source entity needing the reference.
 And it should return:
-    - a dict of referrer/referee-specific appropriately escaped text fragments,
-      for use in a format_map call.
+    - a string, appropriately formatted for typical references of the type.
 """
 
 import inspect
@@ -60,9 +58,7 @@ def escape(esctype):
 ### Referencer function handling. ###
 def default_referencer(src, cur):
     """Reference function that creates a generic fragment dict from path names."""
-    frag = src.metadata.copy()
-    path_attributes(src.destination, frag)
-    return frag
+    return src
 
 
 referencer_funcs = {None: default_referencer}
