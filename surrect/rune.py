@@ -86,9 +86,17 @@ def load(fpath):
             "rune": rune,
             "RuneNode": RuneNode,
             "RuneType": RuneType,
+            # constructor/typecheck functions
             "mkrune": mkrune,
+            "mkneru": mkneru,
             "mkdata": mkdata,
+            "mktext": mktext,
             "mknull": mknull,
+            "isrune": isrune,
+            "isneru": isneru,
+            "isdata": isdata,
+            "istext": istext,
+            "isnull": isnull,
             # include the other registry decorators
             "escape": escape,
             "referencer": referencer
@@ -101,9 +109,19 @@ RuneNode = namedtuple("RuneNode", ("kind", "data", "nodes", "attributes"))
 RuneType = Enum("RuneType", ("RUNE", "NERU", "TEXT", "DATA", "NULL"))
 
 
+# Quick rune node constructors: mk[type]
+
 def mkrune(r: str, a: Sequence[object], nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode:
     """Create a RuneNode referencing a rune."""
     return RuneNode(RuneType.RUNE, (r, a),
+        [] if nodes is None else nodes,
+        set() if attrs is None else attrs
+    )
+
+
+def mkneru(r: str, a: Sequence[object], nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode:
+    """Create a RuneNode referencing a neru."""
+    return RuneNode(RuneType.NERU, (r, a),
         [] if nodes is None else nodes,
         set() if attrs is None else attrs
     )
@@ -117,12 +135,38 @@ def mkdata(d: str, nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode
     )
 
 
+def mktext(t: str, nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode:
+    """Create a text RuneNode."""
+    return RuneNode(RuneType.TEXT, t,
+        [] if nodes is None else nodes,
+        set() if attrs is None else attrs
+    )
+
+
 def mknull(nodes: List[RuneNode]=None, attrs: Set[str]=None) -> RuneNode:
     """Create a null RuneNode"""
     return RuneNode(RuneType.NULL, None,
         [] if nodes is None else nodes,
         set() if attrs is None else attrs
     )
+
+
+# Quick rune node type tests: is[type]
+
+def isrune(nod: RuneNode) -> bool:
+    return nod.kind is RuneType.RUNE
+
+def isneru(nod: RuneNode) -> bool:
+    return nod.kind is RuneType.NERU
+
+def isdata(nod: RuneNode) -> bool:
+    return nod.kind is RuneType.DATA
+
+def istext(nod: RuneNode) -> bool:
+    return nod.kind is RuneType.TEXT
+
+def isnull(nod: RuneNode) -> bool:
+    return nod.kind is RuneType.NULL
 
 
 def assemble(scroll_node: ScrollNode) -> RuneNode:
@@ -177,7 +221,6 @@ def inscribe(node: RuneNode, rtype: str, context: dict) -> List[RuneNode]:
         # Runes are allowed to evaluate to 0 -> n arbitrary nodes.
         # Other nodes may only evaluate to themselves.
         # As runes can produce runes, they need to be reevaluated.
-        # This allows for some nifty recursion.
         if nodes[i].kind in {RuneType.RUNE, RuneType.NERU, RuneType.TEXT}:
             nodes[i:i+1] = inscribe(nodes[i], rtype, context)
         else:
