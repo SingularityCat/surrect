@@ -30,10 +30,10 @@ def load_runedir(runedir):
     # Load runes.
     out("Loading runes...")
     for rpfx, rdirs, runes in walk(runedir):
-        for rune in runes:
-            runepath = path.join(rpfx, rune)
+        for rid in runes:
+            runepath = path.join(rpfx, rid)
             if runepath.endswith(".py"):
-                log.info("Loading rune \"%s\"" % runepath)
+                log.info("Loading rune file \"%s\"" % runepath)
                 rune.load(runepath)
 
 
@@ -79,10 +79,10 @@ def build_mode(args):
     def log_cat_tree(cat, indent=""):
         for ent in cat:
             if isinstance(ent, Category):
-                out("{0} - {1}".format(indent, ent))
+                log.info("{0} - {1}".format(indent, ent))
                 log_cat_tree(ent, indent + "    ")
             else:
-                out("{0} - {1}".format(indent, ent))
+                log.info("{0} - {1}".format(indent, ent))
     log_cat_tree(category_tree)
     src_rend_list = globmap_sources_to_renderers(category_tree.sources(), globmap, renderers)
 
