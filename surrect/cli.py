@@ -1,7 +1,7 @@
 import sys
 import json
+import logging
 
-from logging import getLogger, ERROR, WARNING, INFO, DEBUG
 from os import listdir, mkdir, path, walk
 from argparse import ArgumentParser, FileType
 from shutil import rmtree
@@ -14,14 +14,14 @@ from .summon import get_outfunc_msg, load_renderers, load_globmap, globmap_sourc
 
 
 VERBOSITY_TO_LOGLEVEL = {
-    0: ERROR,
-    1: WARNING,
-    2: INFO,
-    3: DEBUG
+    0: logging.ERROR,
+    1: logging.WARNING,
+    2: logging.INFO,
+    3: logging.DEBUG
 }
 
 
-log = getLogger(__name__)
+log = logging.getLogger(__name__)
 out = get_outfunc_msg()
 
 # Helper functions.
@@ -103,13 +103,14 @@ def build_mode(args):
         if not args.noop:
             mkdir(phy_root)
 
-        out("Conducting riturals...")
-        for source, renderer in src_rend_list:
-            renderer.ritual(source)
+    out("Conducting riturals...")
+    for source, renderer in src_rend_list:
+        renderer.ritual(source)
 
-        out("Summoning...")
-        for source, renderer in src_rend_list:
-            renderer.summon(source, category_tree)
+    out("Summoning...")
+    for source, renderer in src_rend_list:
+        renderer.summon(source, category_tree)
+
     return 0
 
 
@@ -223,7 +224,7 @@ asm_parser.add_argument(nargs='?',
 
 def main():
     args = arg_parser.parse_args()
-    log.setLevel(VERBOSITY_TO_LOGLEVEL[min(args.verbosity, 3)])
+    logging.basicConfig(level=VERBOSITY_TO_LOGLEVEL[min(args.verbosity, 3)])
 
     if args.ver:
         print("surrect %s" % meta.version)
