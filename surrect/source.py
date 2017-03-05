@@ -8,24 +8,49 @@ from typing import Tuple, Callable
 from . import scroll
 
 
-def read_scroll_metadata(scrpath : str) -> dict:
+def parse_scroll_metadata(lexer, metadata):
     """
-    Read metadata from a scroll file.
     Metadata exists as series of special comments, each starting with
     three hashes, optionally interleaved with regular comments.
     Metadata comments are key-value pairs.
     Reading stops after the first non-comment token.
+    Returns the first (token, value) pair of non-comment tokens,
+    or None if no tokens are left.
+    """
+    for token, value in lexer:
+        if token is not scroll.lexer.TOKEN_COMMENT:
+            break
+        # One of the hashes is removed by the lexer.
+        elif value.startswith("##"):
+            key, _, value = value[2:].partition(":")
+            metadata[key.strip()] = value.strip()
+    else:
+        return None
+    return token, value
+
+
+def scrape_scroll_metadata(lexer, metadata):
+    """
+    Siphons off metadata from a lexer, putting it in the provided dict,
+    then yeilds tokes as the lexer would.
+    Uses parse_scroll_metadata to do so.
+    """
+    tokval = parse_scroll_metadata(lexer, metadata)
+    if tokval is None:
+        return
+    yield tokval
+    yield from lexer
+
+
+def read_scroll_metadata(scrpath: str) -> dict:
+    """
+    Read metadata from a scroll file.
+    Uses parse_scroll_metadata to do so.
     """
     metadata = {}
     with open(scrpath, "r") as source:
         lexer = scroll.lexer.lex(source)
-        for token, value in lexer:
-            if token is not scroll.lexer.TOKEN_COMMENT:
-                break
-            # One of the hashes is removed by the lexer.
-            elif value.startswith("##"):
-                key, _, value = value[2:].partition(":")
-                metadata[key.strip()] = value.strip()
+        parse_scroll_metadata(lexer, metadata)
         lexer.close()
     return metadata
 
