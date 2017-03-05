@@ -208,7 +208,7 @@ class SiteRenderer(Renderer):
 
         if source.kind is SourceType.SCROLL:
             with open(srcpath, "r") as srcfile:
-                scroll_tree = scroll.parser.parse(scroll.lexer.lex(srcfile))
+                scroll_tree = scroll.parse(scroll.lex(srcfile))
 
             rune_tree = rune.assemble(scroll_tree)
             inscribed_tree = rune.inscribe(rune_tree, self.fmt, source.metadata)
